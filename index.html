@@ -3,70 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Truck Map - Zákazy jízdy a objížďky pro kamiony</title>
+    <title>Truck Map - Přesné Zákazy a Objížďky pro Kamiony</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1f2937; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        header { background: #111827; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 1.2rem; }
         #app-container { display: flex; flex: 1; position: relative; }
-        #sidebar { width: 320px; background: #f3f4f6; padding: 15px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; }
+        #sidebar { width: 340px; background: #f9fafb; padding: 15px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; display: flex; flex-direction: column; gap: 15px; }
         #map { flex: 1; height: 100%; }
-        .control-group { margin-bottom: 20px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
-        .control-group h3 { font-size: 0.95rem; margin-bottom: 10px; color: #374151; }
+        .card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .card h3 { font-size: 0.95rem; margin-bottom: 10px; color: #1f2937; }
         .toggle-btn { display: block; width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-align: left; }
-        .btn-active { background: #ef4444; color: white; }
+        .btn-active-holiday { background: #d97706; color: white; }
+        .btn-active-sunday { background: #dc2626; color: white; }
         .btn-inactive { background: #e5e7eb; color: #374151; }
         .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.85rem; }
-        .legend-color { width: 16px; height: 6px; border-radius: 2px; }
+        .legend-color { width: 18px; height: 6px; border-radius: 2px; }
+        .input-group { margin-bottom: 8px; }
+        .input-group label { font-size: 0.8rem; color: #4b5563; display: block; margin-bottom: 2px; }
+        .input-group input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.85rem; }
+        .action-btn { width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
         @media (max-width: 768px) {
             #app-container { flex-direction: column-reverse; }
-            #sidebar { width: 100%; height: 40%; }
+            #sidebar { width: 100%; height: 45%; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>🚛 Truck-Map: Německo & Evropa</h1>
-        <span id="season-status" style="font-size: 0.85rem; background: #374151; padding: 4px 8px; border-radius: 4px;">Režim: Standardní</span>
+        <h1>🚛 Truck-Map: Zákazy přesně na silnici</h1>
+        <span id="season-status" style="font-size: 0.85rem; background: #374151; padding: 4px 8px; border-radius: 4px;">Načítám silnice...</span>
     </header>
 
     <div id="app-container">
         <div id="sidebar">
-            <div class="control-group">
+            <div class="card">
                 <h3>Vymezení zákazů (Německo)</h3>
-                <button id="btn-holiday" class="toggle-btn btn-inactive" onclick="toggleHolidayRestrictions()">
-                    ☀️ Letní prázdninové zákazy (Soboty 7:00-20:00)
+                <button id="btn-holiday" class="toggle-btn btn-active-holiday" onclick="toggleHoliday()">
+                    ☀️ Letní zákazy (Sobota 7-20h)
                 </button>
-                <button id="btn-sunday" class="toggle-btn btn-active" onclick="toggleSundayRestrictions()">
-                    🚫 Nedělní a sváteční zákazy (0:00-22:00)
+                <button id="btn-sunday" class="toggle-btn btn-active-sunday" onclick="toggleSunday()">
+                    🚫 Nedělní / Sváteční zákazy
                 </button>
             </div>
 
-            <div class="control-group">
-                <h3>Vysvětlivky mapy</h3>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #ef4444;"></div>
-                    <span>Úsek se zákazovanou jízdou</span>
+            <div class="card">
+                <h3>Vyhledat trasu / Objížďku</h3>
+                <div class="input-group">
+                    <label>Start (město):</label>
+                    <input type="text" id="start-input" placeholder="např. Frankfurt">
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #f59e0b;"></div>
-                    <span>Letní omezení (Ferienreiseverordnung)</span>
+                <div class="input-group">
+                    <label>Cíl (město):</label>
+                    <input type="text" id="end-input" placeholder="např. München">
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #10b981;"></div>
-                    <span>Doporučená objízdná trasa</span>
-                </div>
+                <button class="action-btn" onclick="calculateRoute()">Spočítat trasu</button>
             </div>
 
-            <div class="control-group">
-                <h3>Informace</h3>
-                <p style="font-size: 0.8rem; color: #6b7280;">
-                    V Německu platí během července a srpna zákaz jízdy pro nákladní automobily nad 7,5 t v soboty od 7:00 do 20:00 na vybraných úsecích dálnic (např. A1, A3, A7, A8, A9, A61 apod.).
-                </p>
+            <div class="card">
+                <h3>Vysvětlivky</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dc2626;"></div>
+                    <span>Celoroční zákazy jízdy</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d97706;"></div>
+                    <span>Prázdninová úprava (Ferienreise)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2563eb;"></div>
+                    <span>Vaše plánovaná trasa</span>
+                </div>
             </div>
         </div>
 
@@ -76,74 +87,134 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializace mapy (střed v Německu/ČR)
         const map = L.map('map').setView([50.1109, 8.6821], 6);
 
-        // Podkladová mapa
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        let holidayLayerGroup = L.layerGroup();
-        let sundayLayerGroup = L.layerGroup();
-        let showHoliday = false;
+        let holidayGroup = L.layerGroup().addTo(map);
+        let sundayGroup = L.layerGroup().addTo(map);
+        let routeGroup = L.layerGroup().addTo(map);
+
+        let showHoliday = true;
         let showSunday = true;
 
-        // Vzorová data – úseky dálnic s letním omezením (např. A7, A8, A9 v DE)
-        const holidayRestrictions = [
-            { name: "A7: Hannover - Hamburg", coords: [[52.37, 9.73], [53.55, 9.99]] },
-            { name: "A8: München - Salzburg", coords: [[48.13, 11.57], [47.80, 13.04]] },
-            { name: "A9: Nürnberg - München", coords: [[49.45, 11.07], [48.13, 11.57]] },
-            { name: "A61: Koblenz - Ludwigshafen", coords: [[50.35, 7.59], [49.48, 8.46]] }
+        // Reálné definiční body pro přesné vyrasování přesných úseků silnic v Německu
+        const holidayRoads = [
+            { name: "A1: Köln - Dortmund", waypoints: [[50.93, 6.95], [51.51, 7.46]] },
+            { name: "A3: Oberhausen - Elten", waypoints: [[51.47, 6.85], [51.86, 6.16]] },
+            { name: "A7: Soltau - Hamburg", waypoints: [[52.98, 9.83], [53.55, 9.99]] },
+            { name: "A8: München - Salzburg", waypoints: [[48.13, 11.57], [47.80, 13.04]] },
+            { name: "A9: Nürnberg - München", waypoints: [[49.45, 11.07], [48.13, 11.57]] },
+            { name: "A61: Koblenz - Ludwigshafen", waypoints: [[50.35, 7.59], [49.48, 8.46]] }
         ];
 
-        // Vzorová data – celoroční nedělní zákazy / tranzitní omezení
-        const sundayRestrictions = [
-            { name: "A1: Köln - Dortmund", coords: [[50.93, 6.95], [51.51, 7.46]] },
-            { name: "A3: Frankfurt - Würzburg", coords: [[50.11, 8.68], [49.79, 9.93]] }
+        const sundayRoads = [
+            { name: "A4: Dresden - Görlitz", waypoints: [[51.05, 13.73], [51.15, 14.98]] },
+            { name: "A93: Inntaldreieck - Kiefersfelden", waypoints: [[47.81, 12.10], [47.61, 12.19]] }
         ];
 
-        function renderMapLayers() {
-            holidayLayerGroup.clearLayers();
-            sundayLayerGroup.clearLayers();
+        // Funkce pro získání přesné trasykopírující silnici z OSRM API
+        async function fetchExactRoad(waypoints, color, layerGroup, popupText) {
+            const coordsStr = waypoints.map(wp => `${wp[1]},${wp[0]}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
 
-            if (showHoliday) {
-                holidayRestrictions.forEach(item => {
-                    const polyline = L.polyline(item.coords, { color: '#f59e0b', weight: 6, opacity: 0.8 });
-                    polyline.bindPopup(`<b>${item.name}</b><br>Zákaz: Soboty v Červenci/Srpnu (7:00–20:00)`);
-                    holidayLayerGroup.addLayer(polyline);
-                });
-                holidayLayerGroup.addTo(map);
-            }
-
-            if (showSunday) {
-                sundayRestrictions.forEach(item => {
-                    const polyline = L.polyline(item.coords, { color: '#ef4444', weight: 6, opacity: 0.8 });
-                    polyline.bindPopup(`<b>${item.name}</b><br>Zákaz: Neděle a svátky (0:00–22:00)`);
-                    sundayLayerGroup.addLayer(polyline);
-                });
-                sundayLayerGroup.addTo(map);
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    const routeGeoJSON = data.routes[0].geometry;
+                    const polyline = L.geoJSON(routeGeoJSON, {
+                        style: { color: color, weight: 6, opacity: 0.85 }
+                    });
+                    polyline.bindPopup(popupText);
+                    layerGroup.addLayer(polyline);
+                }
+            } catch (err) {
+                console.error("Chyba při načítání trasy:", err);
             }
         }
 
-        function toggleHolidayRestrictions() {
+        async function loadAllRoads() {
+            document.getElementById('season-status').innerText = "Načítání přesných silnic...";
+            
+            // Načíst prázdninové zákazy
+            for (let r of holidayRoads) {
+                await fetchExactRoad(r.waypoints, '#d97706', holidayGroup, `<b>${r.name}</b><br>Zákaz: Letní soboty (7:00–20:00)`);
+            }
+
+            // Načíst nedělní zákazy
+            for (let r of sundayRoads) {
+                await fetchExactRoad(r.waypoints, '#dc2626', sundayGroup, `<b>${r.name}</b><br>Zákaz: Neděle a svátky (0:00–22:00)`);
+            }
+
+            document.getElementById('season-status').innerText = "Silnice načteny";
+        }
+
+        function toggleHoliday() {
             showHoliday = !showHoliday;
             const btn = document.getElementById('btn-holiday');
-            btn.className = showHoliday ? "toggle-btn btn-active" : "toggle-btn btn-inactive";
-            document.getElementById('season-status').innerText = showHoliday ? "Režim: Letní prázdniny" : "Režim: Standardní";
-            renderMapLayers();
+            btn.className = showHoliday ? "toggle-btn btn-active-holiday" : "toggle-btn btn-inactive";
+            if (showHoliday) map.addLayer(holidayGroup); else map.removeLayer(holidayGroup);
         }
 
-        function toggleSundayRestrictions() {
+        function toggleSunday() {
             showSunday = !showSunday;
             const btn = document.getElementById('btn-sunday');
-            btn.className = showSunday ? "toggle-btn btn-active" : "toggle-btn btn-inactive";
-            renderMapLayers();
+            btn.className = showSunday ? "toggle-btn btn-active-sunday" : "toggle-btn btn-inactive";
+            if (showSunday) map.addLayer(sundayGroup); else map.removeLayer(sundayGroup);
         }
 
-        // První vykreslení
-        renderMapLayers();
+        // Vyhledávání trasy mezi městy
+        async function calculateRoute() {
+            const start = document.getElementById('start-input').value;
+            const end = document.getElementById('end-input').value;
+
+            if (!start || !end) {
+                alert("Prosím zadejte start i cíl.");
+                return;
+            }
+
+            try {
+                // Geokódování měst na souřadnice
+                const startRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(start)}`);
+                const startData = await startRes.json();
+                
+                const endRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(end)}`);
+                const endData = await endRes.json();
+
+                if (startData.length === 0 || endData.length === 0) {
+                    alert("Nenalezeno jedno z měst.");
+                    return;
+                }
+
+                const p1 = [startData[0].lon, startData[0].lat];
+                const p2 = [endData[0].lon, endData[0].lat];
+
+                routeGroup.clearLayers();
+
+                const routeUrl = `https://router.project-osrm.org/route/v1/driving/${p1[0]},${p1[1]};${p2[0]},${p2[1]}?overview=full&geometries=geojson`;
+                const routeRes = await fetch(routeUrl);
+                const routeData = await routeRes.json();
+
+                if (routeData.routes.length > 0) {
+                    const line = L.geoJSON(routeData.routes[0].geometry, {
+                        style: { color: '#2563eb', weight: 7, opacity: 0.9 }
+                    });
+                    line.bindPopup(`<b>Trasa:</b> ${start} -> ${end}`);
+                    routeGroup.addLayer(line);
+                    map.fitBounds(line.getBounds());
+                }
+
+            } catch (e) {
+                alert("Chyba při výpočtu trasy.");
+            }
+        }
+
+        // Spuštění po načtení
+        loadAllRoads();
     </script>
 </body>
 </html>
