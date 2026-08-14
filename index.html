@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Map - Zákazy jízdy a objížďky pro kamiony</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #1f2937; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 1.2rem; }
+        #app-container { display: flex; flex: 1; position: relative; }
+        #sidebar { width: 320px; background: #f3f4f6; padding: 15px; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; }
+        #map { flex: 1; height: 100%; }
+        .control-group { margin-bottom: 20px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .control-group h3 { font-size: 0.95rem; margin-bottom: 10px; color: #374151; }
+        .toggle-btn { display: block; width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; text-align: left; }
+        .btn-active { background: #ef4444; color: white; }
+        .btn-inactive { background: #e5e7eb; color: #374151; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.85rem; }
+        .legend-color { width: 16px; height: 6px; border-radius: 2px; }
+        @media (max-width: 768px) {
+            #app-container { flex-direction: column-reverse; }
+            #sidebar { width: 100%; height: 40%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚛 Truck-Map: Německo & Evropa</h1>
+        <span id="season-status" style="font-size: 0.85rem; background: #374151; padding: 4px 8px; border-radius: 4px;">Režim: Standardní</span>
+    </header>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <div class="control-group">
+                <h3>Vymezení zákazů (Německo)</h3>
+                <button id="btn-holiday" class="toggle-btn btn-inactive" onclick="toggleHolidayRestrictions()">
+                    ☀️ Letní prázdninové zákazy (Soboty 7:00-20:00)
+                </button>
+                <button id="btn-sunday" class="toggle-btn btn-active" onclick="toggleSundayRestrictions()">
+                    🚫 Nedělní a sváteční zákazy (0:00-22:00)
+                </button>
+            </div>
+
+            <div class="control-group">
+                <h3>Vysvětlivky mapy</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Úsek se zákazovanou jízdou</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f59e0b;"></div>
+                    <span>Letní omezení (Ferienreiseverordnung)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Doporučená objízdná trasa</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Informace</h3>
+                <p style="font-size: 0.8rem; color: #6b7280;">
+                    V Německu platí během července a srpna zákaz jízdy pro nákladní automobily nad 7,5 t v soboty od 7:00 do 20:00 na vybraných úsecích dálnic (např. A1, A3, A7, A8, A9, A61 apod.).
+                </p>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializace mapy (střed v Německu/ČR)
+        const map = L.map('map').setView([50.1109, 8.6821], 6);
+
+        // Podkladová mapa
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let holidayLayerGroup = L.layerGroup();
+        let sundayLayerGroup = L.layerGroup();
+        let showHoliday = false;
+        let showSunday = true;
+
+        // Vzorová data – úseky dálnic s letním omezením (např. A7, A8, A9 v DE)
+        const holidayRestrictions = [
+            { name: "A7: Hannover - Hamburg", coords: [[52.37, 9.73], [53.55, 9.99]] },
+            { name: "A8: München - Salzburg", coords: [[48.13, 11.57], [47.80, 13.04]] },
+            { name: "A9: Nürnberg - München", coords: [[49.45, 11.07], [48.13, 11.57]] },
+            { name: "A61: Koblenz - Ludwigshafen", coords: [[50.35, 7.59], [49.48, 8.46]] }
+        ];
+
+        // Vzorová data – celoroční nedělní zákazy / tranzitní omezení
+        const sundayRestrictions = [
+            { name: "A1: Köln - Dortmund", coords: [[50.93, 6.95], [51.51, 7.46]] },
+            { name: "A3: Frankfurt - Würzburg", coords: [[50.11, 8.68], [49.79, 9.93]] }
+        ];
+
+        function renderMapLayers() {
+            holidayLayerGroup.clearLayers();
+            sundayLayerGroup.clearLayers();
+
+            if (showHoliday) {
+                holidayRestrictions.forEach(item => {
+                    const polyline = L.polyline(item.coords, { color: '#f59e0b', weight: 6, opacity: 0.8 });
+                    polyline.bindPopup(`<b>${item.name}</b><br>Zákaz: Soboty v Červenci/Srpnu (7:00–20:00)`);
+                    holidayLayerGroup.addLayer(polyline);
+                });
+                holidayLayerGroup.addTo(map);
+            }
+
+            if (showSunday) {
+                sundayRestrictions.forEach(item => {
+                    const polyline = L.polyline(item.coords, { color: '#ef4444', weight: 6, opacity: 0.8 });
+                    polyline.bindPopup(`<b>${item.name}</b><br>Zákaz: Neděle a svátky (0:00–22:00)`);
+                    sundayLayerGroup.addLayer(polyline);
+                });
+                sundayLayerGroup.addTo(map);
+            }
+        }
+
+        function toggleHolidayRestrictions() {
+            showHoliday = !showHoliday;
+            const btn = document.getElementById('btn-holiday');
+            btn.className = showHoliday ? "toggle-btn btn-active" : "toggle-btn btn-inactive";
+            document.getElementById('season-status').innerText = showHoliday ? "Režim: Letní prázdniny" : "Režim: Standardní";
+            renderMapLayers();
+        }
+
+        function toggleSundayRestrictions() {
+            showSunday = !showSunday;
+            const btn = document.getElementById('btn-sunday');
+            btn.className = showSunday ? "toggle-btn btn-active" : "toggle-btn btn-inactive";
+            renderMapLayers();
+        }
+
+        // První vykreslení
+        renderMapLayers();
+    </script>
+</body>
+</html>
