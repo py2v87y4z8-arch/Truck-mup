@@ -20,7 +20,6 @@
         button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #0369a1; }
         
-        /* Karta s informacemi o trase */
         .info-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-top: 10px; }
         .info-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; }
         .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
@@ -58,21 +57,20 @@
 
     <button id="calcBtn" onclick="calculateRoute()">Spočítat trasu</button>
 
-    <!-- Přehled informací o trase -->
     <div class="info-card">
-        <h3>Informace o trase</h3>
+        <h3>Informace o trase (Kamion)</h3>
         <div class="info-row">
             <span>Vzdálenost:</span>
             <span id="distVal" class="info-value">-- km</span>
         </div>
         <div class="info-row">
-            <span>Doba jízdy:</span>
+            <span>Odhad jízdy (~75 km/h):</span>
             <span id="timeVal" class="info-value">-- h -- min</span>
         </div>
     </div>
 
     <div class="ban-warning">
-        <b>⚠️ Sobotní zákazy v DE:</b> Červené čárkované úseky označují dálnice se zákazovým omezením jízdy v sobotu v létě (07:00–20:00).
+        <b>⚠️ Sobotní zákazy v DE:</b> Červené čárkované úseky označují dálnice se zákazovým omezením jízdy v sobotu v léte (07:00–20:00).
     </div>
 </div>
 
@@ -121,9 +119,7 @@
 
     loadAccurateBans();
 
-    // Převod názvu města na souřadnice (Geocoding)
     async function getCoordinates(query) {
-        // Pokud uživatel zadá přímo souřadnice (např. 50.07, 14.43)
         const parts = query.split(',');
         if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
             return { lat: parseFloat(parts[0].trim()), lng: parseFloat(parts[1].trim()) };
@@ -156,11 +152,9 @@
         btn.disabled = true;
 
         try {
-            // 1. Získání souřadnic měst
             const startCoords = await getCoordinates(startText);
             const endCoords = await getCoordinates(endText);
 
-            // 2. Výpočet trasy z OSRM
             const url = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`;
             const response = await fetch(url);
             if (!response.ok) throw new Error(`Chyba serveru (${response.status})`);
@@ -173,15 +167,18 @@
 
             const route = data.routes[0];
 
-            // 3. Výpočet vzdálenosti a času
-            const distanceKm = (route.distance / 1000).toFixed(1);
-            const hours = Math.floor(route.duration / 3600);
-            const minutes = Math.round((route.duration % 3600) / 60);
+            // Výpočet vzdálenosti
+            const distanceKm = route.distance / 1000;
+            
+            // Přepočet času pro KAMION (Průměrná rychlost 75 km/h zohledňující omezovač 80 km/h)
+            const truckAvgSpeed = 75; 
+            const totalHoursDecimal = distanceKm / truckAvgSpeed;
+            const hours = Math.floor(totalHoursDecimal);
+            const minutes = Math.round((totalHoursDecimal - hours) * 60);
 
-            document.getElementById('distVal').innerText = `${distanceKm} km`;
+            document.getElementById('distVal').innerText = `${distanceKm.toFixed(1)} km`;
             document.getElementById('timeVal').innerText = `${hours} h ${minutes} min`;
 
-            // 4. Vykreslení trasy a značek
             if (routeLayer) map.removeLayer(routeLayer);
             if (startMarker) map.removeLayer(startMarker);
             if (endMarker) map.removeLayer(endMarker);
