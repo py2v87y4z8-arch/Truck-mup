@@ -17,7 +17,7 @@
         input:focus { outline: none; border-color: #38bdf8; }
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
-        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
+        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 5px; }
         button:hover { background: #0369a1; }
         
         .info-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-top: 5px; }
@@ -30,9 +30,8 @@
         
         .checkbox-container { display: flex; align-items: center; gap: 10px; background: #1e293b; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; }
         .checkbox-container input { width: auto; margin: 0; cursor: pointer; }
-        .checkbox-container span { font-size: 13px; color: #e2e8f0; font-weight: 600; }
+        .checkbox-container span { font-size: 12px; color: #e2e8f0; font-weight: 600; }
 
-        /* Štítek čísla dálnice v mapě */
         .road-badge {
             background: #ef4444 !important;
             color: #ffffff !important;
@@ -72,25 +71,32 @@
         </div>
     </div>
 
-    <!-- Přepínač pro zapnutí/vypnutí zákazů -->
     <label class="checkbox-container">
         <input type="checkbox" id="toggleBans" checked onchange="toggleBanLayer()" />
-        <span>Zobrazit dálniční zákazy v DE</span>
+        <span>Zobrazit dálniční zákazy v DE (Červená)</span>
+    </label>
+
+    <label class="checkbox-container" style="border-color: #22c55e;">
+        <input type="checkbox" id="useDetour" />
+        <span style="color: #4ade80;">Aktivovat zelenou objízdnou trasu (Mimo dálniční zákazy)</span>
     </label>
 
     <button id="calcBtn" onclick="calculateRoute()">Spočítat trasu</button>
 
-    <!-- Dynamické upozornění na dnešní den -->
     <div id="todayBanInfo" class="ban-warning"></div>
 
     <div class="info-card">
-        <h3>Informace o trase (Kamion)</h3>
+        <h3>Informace o trase</h3>
+        <div class="info-row">
+            <span>Typ trasy:</span>
+            <span id="routeTypeVal" class="info-value">Přímá trasa</span>
+        </div>
         <div class="info-row">
             <span>Vzdálenost:</span>
             <span id="distVal" class="info-value">-- km</span>
         </div>
         <div class="info-row">
-            <span>Odhad jízdy (~75 km/h):</span>
+            <span>Odhad jízdy:</span>
             <span id="timeVal" class="info-value">-- h -- min</span>
         </div>
     </div>
@@ -107,7 +113,6 @@
         maxZoom: 19
     }).addTo(map);
 
-    // Vrstva pro zákazy, kterou lze zapínat/vypínat
     const banLayerGroup = L.layerGroup().addTo(map);
 
     const germanBans = [
@@ -123,7 +128,6 @@
         { code: "A99", name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
     ];
 
-    // Funkce na zapnutí/vypnutí zákazů
     function toggleBanLayer() {
         const isChecked = document.getElementById('toggleBans').checked;
         if (isChecked) {
@@ -133,13 +137,11 @@
         }
     }
 
-    // Kontrola zákazů pro dnešní den
     function checkTodayBans() {
         const now = new Date();
-        const day = now.getDay(); // 0 = Neděle, 6 = Sobota
-        const month = now.getMonth(); // 6 = Červenec, 7 = Srpen
+        const day = now.getDay();
+        const month = now.getMonth();
         const infoEl = document.getElementById('todayBanInfo');
-
         const daysCz = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
         const currentDayName = daysCz[day];
 
@@ -147,17 +149,18 @@
             infoEl.style.background = 'rgba(239, 68, 68, 0.15)';
             infoEl.style.borderColor = '#ef4444';
             infoEl.style.color = '#fca5a5';
-            infoEl.innerHTML = `<b>🔴 DNES JE ${currentDayName.toUpperCase()}:</b> Platí celostátní nedělní zákaz jízdy v DE (00:00 – 22:00) pro vozidla nad 7.5t!`;
+            infoEl.innerHTML = `<b>🔴 DNES JE ${currentDayName.toUpperCase()}:</b> Platí celostátní nedělní zákaz jízdy v DE (00:00 – 22:00)!`;
         } else if (day === 6 && (month === 6 || month === 7)) {
             infoEl.style.background = 'rgba(249, 115, 22, 0.15)';
             infoEl.style.borderColor = '#f97316';
             infoEl.style.color = '#fdba74';
-            infoEl.innerHTML = `<b>🟠 DNES JE ${currentDayName.toUpperCase()}:</b> Platí prázdninový sobotní zákaz jízdy (07:00 – 20:00) na vyznačených úsecích dálnic!`;
+            infoEl.innerHTML = `<b>🟠 DNES JE ${currentDayName.toUpperCase()}:</b> Platí prázdninový sobotní zákaz (07:00 – 20:00). Doporučujeme zapnout zelenou objízdnou trasu!`;
+            document.getElementById('useDetour').checked = true; // Automaticky předvybere objížďku v sobotu v létě
         } else {
             infoEl.style.background = 'rgba(34, 197, 94, 0.15)';
             infoEl.style.borderColor = '#22c55e';
             infoEl.style.color = '#86efac';
-            infoEl.innerHTML = `<b>🟢 DNES JE ${currentDayName.toUpperCase()}:</b> Standardní dálniční zákaz jízdy dnes v DE neplatí (platí o víkendech/svátcích).`;
+            infoEl.innerHTML = `<b>🟢 DNES JE ${currentDayName.toUpperCase()}:</b> Standardní dálniční zákaz jízdy dnes v DE neplatí.`;
         }
     }
 
@@ -174,14 +177,8 @@
                         style: { color: '#ef4444', weight: 5, dashArray: '8, 8', opacity: 0.95 }
                     });
                     
-                    banPolyline.bindPopup(`<b>${ban.name}</b><br>Sobotní zákaz jízdy v léte (07:00 – 20:00)`);
-                    
-                    // Štítek s číslem dálnice přímo v mapě
-                    banPolyline.bindTooltip(ban.code, {
-                        permanent: true,
-                        direction: 'center',
-                        className: 'road-badge'
-                    });
+                    banPolyline.bindPopup(`<b>${ban.name}</b><br>Sobotní zákaz jízdy v létě (07:00 – 20:00)`);
+                    banPolyline.bindTooltip(ban.code, { permanent: true, direction: 'center', className: 'road-badge' });
 
                     banLayerGroup.addLayer(banPolyline);
                 }
@@ -216,6 +213,7 @@
     async function calculateRoute() {
         const startText = document.getElementById('startLocation').value.trim();
         const endText = document.getElementById('endLocation').value.trim();
+        const useDetour = document.getElementById('useDetour').checked;
         const btn = document.getElementById('calcBtn');
 
         if (!startText || !endText) {
@@ -230,7 +228,12 @@
             const startCoords = await getCoordinates(startText);
             const endCoords = await getCoordinates(endText);
 
-            const url = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`;
+            // Pokud je zapnutá objížďka, vyloučíme placené dálniční úseky podléhající zákazům (vede trasu po spolkových silnicích)
+            let url = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&alternatives=true`;
+            if (useDetour) {
+                url += `&exclude=motorway`;
+            }
+
             const response = await fetch(url);
             if (!response.ok) throw new Error(`Chyba serveru (${response.status})`);
 
@@ -242,21 +245,34 @@
 
             const route = data.routes[0];
 
+            // Výpočet vzdálenosti a času podle typu silnice
             const distanceKm = route.distance / 1000;
-            const truckAvgSpeed = 75; 
-            const totalHoursDecimal = distanceKm / truckAvgSpeed;
+            const avgSpeed = useDetour ? 60 : 75; // Na objízdných spolkových silnicích se počítá s nižší průměrnou rychlostí (60 km/h)
+            const totalHoursDecimal = distanceKm / avgSpeed;
             const hours = Math.floor(totalHoursDecimal);
             const minutes = Math.round((totalHoursDecimal - hours) * 60);
 
             document.getElementById('distVal').innerText = `${distanceKm.toFixed(1)} km`;
             document.getElementById('timeVal').innerText = `${hours} h ${minutes} min`;
+            
+            const routeTypeEl = document.getElementById('routeTypeVal');
+            if (useDetour) {
+                routeTypeEl.innerText = "🟢 Objížďka (Mimo zákazy)";
+                routeTypeEl.style.color = "#4ade80";
+            } else {
+                routeTypeEl.innerText = "🔵 Přímá trasa (Dálnice)";
+                routeTypeEl.style.color = "#38bdf8";
+            }
 
             if (routeLayer) map.removeLayer(routeLayer);
             if (startMarker) map.removeLayer(startMarker);
             if (endMarker) map.removeLayer(endMarker);
 
+            // Nastavení barvy: ZELENÁ pro objížďku, MODRÁ pro přímou trasu
+            const routeColor = useDetour ? '#22c55e' : '#0284c7';
+
             routeLayer = L.geoJSON(route.geometry, {
-                style: { color: '#0284c7', weight: 6, opacity: 0.9 }
+                style: { color: routeColor, weight: 6, opacity: 0.95 }
             }).addTo(map);
 
             startMarker = L.marker([startCoords.lat, startCoords.lng]).addTo(map).bindPopup(`<b>Start:</b> ${startText}`);
