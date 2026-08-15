@@ -49,49 +49,65 @@
             attribution: '© OpenStreetMap contributors, © CARTO'
         }).addTo(map);
 
-        // Klíčové uzly dálnic pro přesné trasování skrze OSRM/OSM
+        // Přesné dálniční křižovatky pro OSRM trasování [Lng, Lat]
         const SUMMER_HIGHWAYS = [
+            {
+                id: "A9",
+                name: "Dálnice A9 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Dreieck Potsdam – Schkeuditzer Kreuz – Hermsdorfer Kreuz – Nürnberg – München.",
+                detour: "Využijte alternativní tranzitní obchvaty BGL.",
+                waypoints: [
+                    [12.9731, 52.3168], // Dreieck Potsdam (A9/A10)
+                    [12.2368, 51.4363], // Schkeuditzer Kreuz (Mimo Lipsko)
+                    [11.9056, 50.8931], // Hermsdorfer Kreuz
+                    [11.1925, 49.4219], // AK Nürnberg
+                    [11.6241, 48.1968]  // AK München-Nord
+                ]
+            },
             {
                 id: "A1",
                 name: "Dálnice A1 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úseky Köln – Dortmund – Bremen – Hamburg.",
                 detour: "Využijte doporučené obchvatové komunikace BGL.",
-                waypoints: [[6.9603, 50.9375], [7.4653, 51.5136], [8.8017, 53.0793], [9.9937, 53.5511]]
+                waypoints: [
+                    [6.9200, 50.9600], [7.4800, 51.5200], [8.8100, 53.0500], [10.0200, 53.5300]
+                ]
             },
             {
                 id: "A3",
                 name: "Dálnice A3 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Oberhausen – Frankfurt – Nürnberg – Passau.",
-                detour: "Objízdné trasy přes A45 / A7 nebo BGL doporučení.",
-                waypoints: [[6.8600, 51.4708], [8.6821, 50.1109], [9.9535, 49.7913], [11.0767, 49.4521], [13.4667, 48.5667]]
+                detour: "Objízdné trasy BGL.",
+                waypoints: [
+                    [6.8600, 51.4708], [8.5700, 50.0500], [9.9535, 49.7913], [11.1800, 49.4100], [13.4300, 48.5500]
+                ]
             },
             {
                 id: "A5",
                 name: "Dálnice A5 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Darmstadt – Karlsruhe – Basel.",
                 detour: "Použijte paralelní obchvatové cesty značené BGL.",
-                waypoints: [[8.6512, 49.8728], [8.4037, 49.0069], [7.5886, 47.5596]]
+                waypoints: [
+                    [8.6200, 49.8600], [8.4300, 49.0000], [7.6000, 47.5800]
+                ]
             },
             {
                 id: "A7",
                 name: "Dálnice A7 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Schleswig-Holstein – Hannover – Würzburg – Füssen.",
                 detour: "Využijte BGL schválené vedlejší tahy.",
-                waypoints: [[9.4333, 54.7833], [9.9073, 53.5435], [9.7320, 52.3759], [9.7000, 50.8667], [9.9535, 49.7913], [10.7000, 47.5667]]
+                waypoints: [
+                    [9.4300, 54.7800], [9.9800, 53.5200], [9.8000, 52.3200], [10.0000, 49.8000], [10.5600, 47.5600]
+                ]
             },
             {
                 id: "A8",
                 name: "Dálnice A8 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Karlsruhe – Stuttgart – München – Salzburg.",
                 detour: "Sledujte tranzitní objížďky BGL.",
-                waypoints: [[8.4037, 49.0069], [9.1829, 48.7758], [11.5820, 48.1351], [12.1225, 47.8561]]
-            },
-            {
-                id: "A9",
-                name: "Dálnice A9 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Potsdam – Leipzig – Nürnberg – München.",
-                detour: "Objezdové dálniční propojky.",
-                waypoints: [[12.9000, 52.3000], [12.3700, 51.3400], [11.0767, 49.4521], [11.5820, 48.1351]]
+                waypoints: [
+                    [8.4300, 49.0000], [9.1500, 48.7400], [11.4500, 48.1500], [12.8500, 47.7500]
+                ]
             }
         ];
 
@@ -133,7 +149,6 @@
             activeLayers = [];
         }
 
-        // Načtení reálných linií dálnic z OSRM Routing API
         async function fetchHighwayGeometry(waypoints) {
             const coordsString = waypoints.map(wp => wp.join(',')).join(';');
             const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
@@ -142,11 +157,10 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 if (data.routes && data.routes.length > 0) {
-                    // OSRM vracejí souřadnice [lng, lat], Leaflet potřebuje [lat, lng]
                     return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                 }
             } catch (e) {
-                console.error("Chyba při načítání trasy:", e);
+                console.error("Chyba trasování:", e);
             }
             return null;
         }
@@ -156,7 +170,6 @@
             event.target.classList.add('active');
             clearLayers();
 
-            // Vykreslení přesných linií dálnic
             if (filterType === 'ALL' || filterType === 'SUMMER') {
                 for (const hw of SUMMER_HIGHWAYS) {
                     const routeCoords = await fetchHighwayGeometry(hw.waypoints);
@@ -179,7 +192,6 @@
                 }
             }
 
-            // Vykreslení bodových značek
             POINT_RESTRICTIONS.forEach(item => {
                 if (filterType !== 'ALL' && item.type !== filterType) return;
 
@@ -206,7 +218,6 @@
             });
         }
 
-        // Výchozí zobrazení
         filterData('ALL');
     </script>
 </body>
