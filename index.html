@@ -16,10 +16,9 @@
         .filter-btn { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer; }
         .filter-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
         
-        /* Úprava vzhledu bublin v mapě */
         .leaflet-popup-content-wrapper { background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 14px; }
         .leaflet-popup-tip { background: #1e1e1e; }
-        .popup-title { font-weight: bold; font-size: 16px; color: #ef4444; margin-bottom: 6px; }
+        .popup-title { font-weight: bold; font-size: 16px; color: #f59e0b; margin-bottom: 6px; }
         .popup-badge { display: inline-block; padding: 3px 6px; background: #374151; color: #f3f4f6; border-radius: 4px; font-size: 11px; margin-bottom: 8px; font-weight: bold; }
         .popup-detour { background: #064e3b; color: #a7f3d0; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 12px; }
     </style>
@@ -34,7 +33,8 @@
 
     <div id="filter-bar">
         <button class="filter-btn active" onclick="filterMarkers('ALL')">Všechny zákazy</button>
-        <button class="filter-btn" onclick="filterMarkers('CLOSED')">🛑 Úplné uzávěry</button>
+        <button class="filter-btn" onclick="filterMarkers('SUMMER')">☀️ Letní sobota (7-20h)</button>
+        <button class="filter-btn" onclick="filterMarkers('CLOSED')">🛑 Trvalé uzávěry</button>
         <button class="filter-btn" onclick="filterMarkers('WEIGHT')">⚖️ Váha / Výška</button>
         <button class="filter-btn" onclick="filterMarkers('ADR')">⚠️ Zákazy ADR</button>
     </div>
@@ -42,7 +42,6 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializace tmavší mapy
         const map = L.map('map').setView([51.1657, 10.4515], 6);
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -50,8 +49,74 @@
             attribution: '© OpenStreetMap contributors, © CARTO'
         }).addTo(map);
 
-        // Kompletní databáze BGL 2026 pro řidiče kamionů
         const RESTRICTIONS = [
+            // --- LETNÍ PRÁZDNINOVÉ ZÁKAZY (Soboty 1.7. - 31.8. od 7:00 do 20:00) ---
+            {
+                id: "A1_SUMMER",
+                type: "SUMMER",
+                name: "A1 - Letní prázdninový zákaz",
+                coords: [51.5000, 7.5000],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na vybraných úsecích (Köln, Dortmund, Bremen, Hamburg).",
+                detour: "Využijte schválenou obchvatovou síť BGL (Ausweichstrecke)."
+            },
+            {
+                id: "A3_SUMMER",
+                type: "SUMMER",
+                name: "A3 - Letní prázdninový zákaz",
+                coords: [50.1000, 8.6000],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na klíčových tranzitních úsecích (Oberhausen–Frankfurt–Nürnberg–Passau).",
+                detour: "Sledujte BGL trasy pro letní soboty."
+            },
+            {
+                id: "A5_SUMMER",
+                type: "SUMMER",
+                name: "A5 - Letní prázdninový zákaz",
+                coords: [49.0000, 8.4000],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) v úseku Darmstadt – Karlsruhe – Basel (hranice CH).",
+                detour: "Použijte doporučené objízdné tahy."
+            },
+            {
+                id: "A7_SUMMER",
+                type: "SUMMER",
+                name: "A7 - Letní prázdninový zákaz",
+                coords: [52.3700, 9.7300],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) v úsecích Schleswig-Holstein, Hannover, Würzburg až po Füssen.",
+                detour: "Využijte BGL objízdné komunikace."
+            },
+            {
+                id: "A8_SUMMER",
+                type: "SUMMER",
+                name: "A8 - Letní prázdninový zákaz",
+                coords: [48.1300, 11.5700],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) Karlsruhe–Stuttgart–München–Salzburg.",
+                detour: "Doporučený odklon tranzitu mimo letní špičky."
+            },
+            {
+                id: "A9_SUMMER",
+                type: "SUMMER",
+                name: "A9 - Letní prázdninový zákaz",
+                coords: [50.3000, 11.8000],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na úsecích Berlín – Lipsko – Norimberk – Mnichov.",
+                detour: "Použijte vedlejší doporučené dálniční propojky."
+            },
+            {
+                id: "A61_SUMMER",
+                type: "SUMMER",
+                name: "A61 - Letní prázdninový zákaz",
+                coords: [50.3500, 7.5800],
+                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) Mönchengladbach – Koblenz – Ludwigshafen.",
+                detour: "Objízdné trasy BGL."
+            },
+            {
+                id: "A99_SUMMER",
+                type: "SUMMER",
+                name: "A99 - Obchvat Mnichova (Letní zákaz)",
+                coords: [48.2000, 11.6000],
+                detail: "Celý dálniční okruh Mnichova podléhá letnímu sobotnímu zákazu (7:00-20:00).",
+                detour: "Tranzitní obchvaty Bavorska."
+            },
+
+            // --- STÁVAJÍCÍ TRVALÁ OMEZENÍ A UZÁVĚRY ---
             {
                 id: "A45",
                 type: "CLOSED",
@@ -152,18 +217,16 @@
 
         let loadedMarkers = [];
 
-        // Vykreslení značek do mapy
         function renderMarkers(filterType = 'ALL') {
-            // Smazat stávající značky
             loadedMarkers.forEach(m => map.removeLayer(m));
             loadedMarkers = [];
 
             RESTRICTIONS.forEach(item => {
                 if (filterType !== 'ALL' && item.type !== filterType) return;
 
-                // Určení barvy ikony
                 let color = "#ef4444"; // Červená pro uzávěry
-                if (item.type === "WEIGHT") color = "#f59e0b"; // Oranžová pro váhu/výšku
+                if (item.type === "SUMMER") color = "#eab308"; // Žlutá pro letní zákaz
+                if (item.type === "WEIGHT") color = "#f59e0b"; // Oranžová pro váhu
                 if (item.type === "ADR") color = "#3b82f6"; // Modrá pro ADR
 
                 const customIcon = L.divIcon({
@@ -177,9 +240,9 @@
 
                 const popupHtml = `
                     <div class="popup-title">${item.name}</div>
-                    <span class="popup-badge">${item.type}</span>
+                    <span class="popup-badge">${item.type === 'SUMMER' ? '☀️ LETNÍ ZÁKAZ (SOBOTA)' : item.type}</span>
                     <div>${item.detail}</div>
-                    <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${item.detour}</div>
+                    <div class="popup-detour"><b>🛠️ Objížďka / Doporučení BGL:</b><br>${item.detour}</div>
                 `;
 
                 marker.bindPopup(popupHtml);
@@ -193,7 +256,6 @@
             renderMarkers(type);
         }
 
-        // První načtení mapy
         renderMarkers();
     </script>
 </body>
