@@ -3,357 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Truck Map - Kamionová navigace</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>LKW Plánovač BGL 2026</title>
     <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; background: #1a1d21; color: #fff; }
-        #sidebar { width: 360px; background: #0f172a; padding: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; overflow-y: auto; border-right: 1px solid #1e293b; }
-        #map { flex: 1; height: 100%; }
-        h2 { margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: #fff; }
-        .subtitle { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
-        label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px; }
-        input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; font-size: 13px; margin-top: 4px; }
-        input:focus { outline: none; border-color: #38bdf8; }
-        .row { display: flex; gap: 10px; }
-        .row > div { flex: 1; }
-        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 5px; }
-        button:hover { background: #0369a1; }
-        
-        .info-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-top: 5px; }
-        .info-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
-        .info-row:last-child { margin-bottom: 0; }
-        .info-value { font-weight: bold; color: #f8fafc; }
-        
-        .ban-warning { border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.4; border: 1px solid; }
-        
-        .checkbox-container { display: flex; align-items: center; gap: 10px; background: #1e293b; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; cursor: pointer; }
-        .checkbox-container input { width: auto; margin: 0; cursor: pointer; }
-        .checkbox-container span { font-size: 12px; color: #e2e8f0; font-weight: 600; }
-
-        .road-badge {
-            background: #ef4444 !important;
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            font-size: 11px !important;
-            padding: 2px 6px !important;
-            border-radius: 4px !important;
-            border: 1px solid #ffffff !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
-        }
-
-        .route-road-badge {
-            color: #ffffff;
-            font-weight: 800;
-            font-size: 11px;
-            padding: 3px 7px;
-            border-radius: 4px;
-            border: 1px solid #ffffff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.7);
-            text-align: center;
-            white-space: nowrap;
-            display: inline-block;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; max-width: 700px; margin: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 12px; }
+        label { font-weight: bold; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { background: #0056b3; color: white; border: none; padding: 10px 15px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+        .status-ok { color: green; font-weight: bold; }
+        .status-warn { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div id="sidebar">
-    <h2>Truck Navigator</h2>
-    <div class="subtitle">& Zákazy jízdy v Německu</div>
-
-    <div>
-        <label>START (MĚSTO NEBO ADRESA)</label>
-        <input type="text" id="startLocation" placeholder="např. Praha" value="Cheb" />
+    <div class="card">
+        <h2>📋 Plánovač přeprav BGL 2026</h2>
+        <div class="form-group">
+            <label>Trasa / Průjezdní body (oddělené čárkou, např. A45, B26, A73):</label>
+            <input type="text" id="route" value="A45, B26, A73, ELBTUNNEL">
+        </div>
+        <div class="form-group">
+            <label>Hmotnost (tuny):</label>
+            <input type="number" id="weight" value="12.0" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Výška (metry):</label>
+            <input type="number" id="height" value="4.0" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Přeprava ADR (nebezpečný náklad):</label>
+            <select id="hazmat">
+                <option value="false">Ne</option>
+                <option value="true">Ano</option>
+            </select>
+        </div>
+        <button onclick="evaluateRoute()">Vyhodnotit plán trasy</button>
+        <div id="results"></div>
     </div>
 
-    <div>
-        <label>CÍL (MĚSTO NEBO ADRESA)</label>
-        <input type="text" id="endLocation" placeholder="např. Hamburg" value="Hamburg" />
-    </div>
+    <script>
+        const RESTRICTIONS = {
+            "A45": { name: "A45 Talbrücke Rahmede", closed: true, detour: "Objížďka přes A1/A3" },
+            "A73": { name: "A73 Norimberk", max_h: 3.9, detour: "A9 pro vozidla nad 3.9 m" },
+            "B26": { name: "B26 Hösbach", max_w: 7.5, detour: "A3 Hösbach/Aschaffenburg" },
+            "ELBTUNNEL": { name: "Elbtunnel (A7)", adr: true, time: "05:00-23:00", detour: "Objízdný okruh A21/B205" }
+        };
 
-    <div class="row">
-        <div>
-            <label>VÝŠKA (M)</label>
-            <input type="number" id="height" value="4.0" step="0.1" />
-        </div>
-        <div>
-            <label>DÉLKA (M)</label>
-            <input type="number" id="length" value="16.5" step="0.1" />
-        </div>
-    </div>
+        function evaluateRoute() {
+            const nodes = document.getElementById("route").value.split(",").map(s => s.trim().toUpperCase());
+            const weight = parseFloat(document.getElementById("weight").value);
+            const height = parseFloat(document.getElementById("height").value);
+            const hazmat = document.getElementById("hazmat").value === "true";
 
-    <label class="checkbox-container">
-        <input type="checkbox" id="toggleBans" checked onchange="toggleBanLayer()" />
-        <span>Zobrazit dálniční zákazy v DE (Červená)</span>
-    </label>
+            let overallStatus = true;
+            let rowsHtml = "";
 
-    <label class="checkbox-container" style="border-color: #22c55e;">
-        <input type="checkbox" id="useDetour" />
-        <span style="color: #4ade80;">Aktivovat zelenou objízdnou trasu (Mimo dálniční zákazy)</span>
-    </label>
+            nodes.forEach(node => {
+                if (RESTRICTIONS[node]) {
+                    const res = RESTRICTIONS[node];
+                    let issues = [];
 
-    <button id="calcBtn" onclick="calculateRoute()">Spočítat trasu</button>
+                    if (res.closed) issues.push("Úplná uzávěra");
+                    if (res.max_w && weight > res.max_w) issues.push(`Váha ${weight}t > ${res.max_w}t`);
+                    if (res.max_h && height > res.max_h) issues.push(`Výška ${height}m > ${res.max_h}m`);
+                    if (res.adr && hazmat) issues.push(`Zákaz ADR (${res.time || 'Trvalé'})`);
 
-    <div id="todayBanInfo" class="ban-warning"></div>
-
-    <div class="info-card">
-        <h3>Informace o trase</h3>
-        <div class="info-row">
-            <span>Typ trasy:</span>
-            <span id="routeTypeVal" class="info-value">Přímá trasa</span>
-        </div>
-        <div class="info-row">
-            <span>Vzdálenost:</span>
-            <span id="distVal" class="info-value">-- km</span>
-        </div>
-        <div class="info-row">
-            <span>Odhad jízdy:</span>
-            <span id="timeVal" class="info-value">-- h -- min</span>
-        </div>
-        <div class="info-row">
-            <span>Použité silnice:</span>
-            <span id="roadsVal" class="info-value" style="font-size:11px; max-width: 160px; text-align: right;">--</span>
-        </div>
-    </div>
-</div>
-
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-    const map = L.map('map').setView([51.1657, 10.4515], 6);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        maxZoom: 19
-    }).addTo(map);
-
-    const banLayerGroup = L.layerGroup().addTo(map);
-    const routeBadgesLayerGroup = L.layerGroup().addTo(map);
-
-    // Zákazy jízdy s rozbalenou A9 až ke křižovatce s A10 před Berlínem
-    const germanBans = [
-        { code: "A1", name: "A1 Zákaz jízdy", coords: [[53.86, 10.68], [53.55, 9.99], [53.07, 8.80], [51.51, 7.46], [50.93, 6.95]] },
-        { code: "A2", name: "A2 Zákaz jízdy", coords: [[52.37, 9.73], [52.26, 10.52]] },
-        { code: "A3", name: "A3 Zákaz jízdy", coords: [[51.47, 6.85], [50.11, 8.68], [49.79, 9.93], [49.45, 11.08], [48.56, 13.46]] },
-        { code: "A5", name: "A5 Zákaz jízdy", coords: [[50.80, 9.54], [50.11, 8.68], [49.00, 8.40], [47.55, 7.58]] },
-        { code: "A6", name: "A6 Zákaz jízdy", coords: [[49.48, 8.46], [49.14, 9.21], [49.45, 11.08]] },
-        { code: "A7", name: "A7 Zákaz jízdy", coords: [[53.55, 9.99], [52.37, 9.73], [51.31, 9.49], [49.79, 9.93], [47.56, 10.70]] },
-        { code: "A8", name: "A8 Zákaz jízdy", coords: [[49.00, 8.40], [48.77, 9.18], [48.13, 11.57], [47.80, 12.00]] },
-        { code: "A9", name: "A9 Zákaz jízdy (až k Berlínu)", coords: [[52.30, 12.97], [51.34, 12.37], [49.45, 11.08], [48.13, 11.57]] },
-        { code: "A61", name: "A61 Zákaz jízdy", coords: [[50.35, 7.59], [49.53, 8.35]] },
-        { code: "A99", name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
-    ];
-
-    function toggleBanLayer() {
-        const isChecked = document.getElementById('toggleBans').checked;
-        if (isChecked) {
-            map.addLayer(banLayerGroup);
-        } else {
-            map.removeLayer(banLayerGroup);
-        }
-    }
-
-    function checkTodayBans() {
-        const now = new Date();
-        const day = now.getDay();
-        const month = now.getMonth();
-        const infoEl = document.getElementById('todayBanInfo');
-        const daysCz = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
-        const currentDayName = daysCz[day];
-
-        if (day === 0) {
-            infoEl.style.background = 'rgba(239, 68, 68, 0.15)';
-            infoEl.style.borderColor = '#ef4444';
-            infoEl.style.color = '#fca5a5';
-            infoEl.innerHTML = `<b>🔴 DNES JE ${currentDayName.toUpperCase()}:</b> Platí celostátní nedělní zákaz jízdy v DE (00:00 – 22:00)!`;
-        } else if (day === 6 && (month === 6 || month === 7)) {
-            infoEl.style.background = 'rgba(249, 115, 22, 0.15)';
-            infoEl.style.borderColor = '#f97316';
-            infoEl.style.color = '#fdba74';
-            infoEl.innerHTML = `<b>🟠 DNES JE ${currentDayName.toUpperCase()}:</b> Platí prázdninový sobotní zákaz (07:00 – 20:00). Doporučujeme zapnout zelenou objízdnou trasu!`;
-            document.getElementById('useDetour').checked = true;
-        } else {
-            infoEl.style.background = 'rgba(34, 197, 94, 0.15)';
-            infoEl.style.borderColor = '#22c55e';
-            infoEl.style.color = '#86efac';
-            infoEl.innerHTML = `<b>🟢 DNES JE ${currentDayName.toUpperCase()}:</b> Standardní dálniční zákaz jízdy dnes v DE neplatí.`;
-        }
-    }
-
-    async function loadAccurateBans() {
-        for (const ban of germanBans) {
-            const coordsFormatted = ban.coords.map(c => `${c[1]},${c[0]}`).join(';');
-            const url = `https://router.project-osrm.org/route/v1/driving/${coordsFormatted}?overview=full&geometries=geojson`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.routes && data.routes[0]) {
-                    const banPolyline = L.geoJSON(data.routes[0].geometry, {
-                        style: { color: '#ef4444', weight: 5, dashArray: '8, 8', opacity: 0.95 }
-                    });
-                    
-                    banPolyline.bindPopup(`<b>${ban.name}</b><br>Sobotní zákaz jízdy v létě (07:00 – 20:00)`);
-                    banPolyline.bindTooltip(ban.code, { permanent: true, direction: 'center', className: 'road-badge' });
-
-                    banLayerGroup.addLayer(banPolyline);
-                }
-            } catch (e) {
-                console.error("Chyba při načítání zákazu:", e);
-            }
-        }
-    }
-
-    checkTodayBans();
-    loadAccurateBans();
-
-    async function getCoordinates(query) {
-        const parts = query.split(',');
-        if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
-            return { lat: parseFloat(parts[0].trim()), lng: parseFloat(parts[1].trim()) };
-        }
-
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && data.length > 0) {
-            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-        }
-        throw new Error(`Místo "${query}" nebylo nalezeno.`);
-    }
-
-    let routeLayer;
-    let startMarker, endMarker;
-
-    async function calculateRoute() {
-        const startText = document.getElementById('startLocation').value.trim();
-        const endText = document.getElementById('endLocation').value.trim();
-        const useDetour = document.getElementById('useDetour').checked;
-        const btn = document.getElementById('calcBtn');
-
-        if (!startText || !endText) {
-            alert('Vyplňte prosím Start i Cíl.');
-            return;
-        }
-
-        btn.innerText = 'Vyhledávám...';
-        btn.disabled = true;
-
-        try {
-            const startCoords = await getCoordinates(startText);
-            const endCoords = await getCoordinates(endText);
-
-            let routeUrl = '';
-
-            if (useDetour) {
-                // Přesné souřadnice ležící bezpečně v tělese dálnice (A72 u Zwickau a A14 u Lipska)
-                if (startCoords.lng > 11.8 && startCoords.lat < 51.0 && endCoords.lat > 52.0) {
-                    const a72Point = "12.4277,50.6375"; // Přímo na jízdním pruhu A72
-                    const a14Point = "12.3850,51.3650"; // Přímo na jízdním pruhu A14
-                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${a72Point};${a14Point};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
-                } else {
-                    let midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
-                    let midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
-                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
-                }
-            } else {
-                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
-            }
-
-            const response = await fetch(routeUrl);
-            if (!response.ok) throw new Error(`Chyba serveru (${response.status})`);
-
-            const data = await response.json();
-            if (!data.routes || data.routes.length === 0) {
-                alert('Trasa nebyla nalezena.');
-                return;
-            }
-
-            const route = data.routes[0];
-
-            const distanceKm = route.distance / 1000;
-            const avgSpeed = useDetour ? 60 : 75;
-            const totalHoursDecimal = distanceKm / avgSpeed;
-            const hours = Math.floor(totalHoursDecimal);
-            const minutes = Math.round((totalHoursDecimal - hours) * 60);
-
-            document.getElementById('distVal').innerText = `${distanceKm.toFixed(1)} km`;
-            document.getElementById('timeVal').innerText = `${hours} h ${minutes} min`;
-            
-            const routeTypeEl = document.getElementById('routeTypeVal');
-            if (useDetour) {
-                routeTypeEl.innerText = "🟢 Objížďka (Mimo zákazy)";
-                routeTypeEl.style.color = "#4ade80";
-            } else {
-                routeTypeEl.innerText = "🔵 Přímá trasa (Dálnice)";
-                routeTypeEl.style.color = "#38bdf8";
-            }
-
-            if (routeLayer) map.removeLayer(routeLayer);
-            if (startMarker) map.removeLayer(startMarker);
-            if (endMarker) map.removeLayer(endMarker);
-            routeBadgesLayerGroup.clearLayers();
-
-            const routeColor = useDetour ? '#22c55e' : '#0284c7';
-            const badgeBg = useDetour ? '#16a34a' : '#0284c7';
-
-            routeLayer = L.geoJSON(route.geometry, {
-                style: { color: routeColor, weight: 6, opacity: 0.95 }
-            }).addTo(map);
-
-            startMarker = L.marker([startCoords.lat, startCoords.lng]).addTo(map).bindPopup(`<b>Start:</b> ${startText}`);
-            endMarker = L.marker([endCoords.lat, endCoords.lng]).addTo(map).bindPopup(`<b>Cíl:</b> ${endText}`);
-
-            const detectedRoads = new Set();
-            if (route.legs) {
-                route.legs.forEach(leg => {
-                    if (leg.steps) {
-                        leg.steps.forEach(step => {
-                            let roadRef = step.ref;
-                            if (!roadRef && step.name) {
-                                const match = step.name.match(/\b(A\d+|B\d+|D\d+|E\d+)\b/i);
-                                if (match) roadRef = match[0];
-                            }
-
-                            if (roadRef) {
-                                const cleanRef = roadRef.split(';')[0].trim();
-                                if (cleanRef && !detectedRoads.has(cleanRef) && step.maneuver && step.maneuver.location) {
-                                    detectedRoads.add(cleanRef);
-                                    const [lng, lat] = step.maneuver.location;
-
-                                    const badgeHtml = `<div class="route-road-badge" style="background:${badgeBg}">${cleanRef}</div>`;
-                                    const customIcon = L.divIcon({
-                                        className: '',
-                                        html: badgeHtml,
-                                        iconSize: [40, 20],
-                                        iconAnchor: [20, 10]
-                                    });
-
-                                    L.marker([lat, lng], { icon: customIcon }).addTo(routeBadgesLayerGroup);
-                                }
-                            }
-                        });
+                    if (issues.length > 0) {
+                        overallStatus = false;
+                        rowsHtml += `<tr><td>${res.name}</td><td><span class="status-warn">ZÁKAZ: ${issues.join(", ")}</span></td><td>${res.detour}</td></tr>`;
+                    } else {
+                        rowsHtml += `<tr><td>${res.name}</td><td><span class="status-ok">OK</span></td><td>-</td></tr>`;
                     }
-                });
-            }
+                } else {
+                    rowsHtml += `<tr><td>${node}</td><td><span class="status-ok">OK (Bez omezení)</span></td><td>-</td></tr>`;
+                }
+            });
 
-            document.getElementById('roadsVal').innerText = Array.from(detectedRoads).join(', ') || 'Lokální komunikace';
+            const statusHeader = overallStatus 
+                ? `<h3 class="status-ok">Výsledek: SCHVÁLENO</h3>` 
+                : `<h3 class="status-warn">Výsledek: VYŽADUJE ÚPRAVU TRASY</h3>`;
 
-            map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
-
-        } catch (error) {
-            console.error('Chyba při výpočtu:', error);
-            alert('Chyba: ' + error.message);
-        } finally {
-            btn.innerText = 'Spočítat trasu';
-            btn.disabled = false;
+            document.getElementById("results").innerHTML = statusHeader + 
+                `<table><tr><th>Úsek</th><th>Stav</th><th>Doporučená objížďka</th></tr>${rowsHtml}</table>`;
         }
-    }
-</script>
-
+    </script>
 </body>
 </html>
