@@ -32,7 +32,6 @@
         .checkbox-container input { width: auto; margin: 0; cursor: pointer; }
         .checkbox-container span { font-size: 12px; color: #e2e8f0; font-weight: 600; }
 
-        /* Štítky dálničních zákazů (červené) */
         .road-badge {
             background: #ef4444 !important;
             color: #ffffff !important;
@@ -44,7 +43,6 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
         }
 
-        /* Štítky pro čísla silnic na trase */
         .route-road-badge {
             color: #ffffff;
             font-weight: 800;
@@ -67,7 +65,7 @@
 
     <div>
         <label>START (MĚSTO NEBO ADRESA)</label>
-        <input type="text" id="startLocation" placeholder="např. Praha" value="Praha" />
+        <input type="text" id="startLocation" placeholder="např. Praha" value="Cheb" />
     </div>
 
     <div>
@@ -251,8 +249,16 @@
             let routeUrl = '';
 
             if (useDetour) {
-                const midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
-                const midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
+                let midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
+                let midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
+
+                // Speciální pravidlo pro výjezd ze západních Čech / Chebska směrem na Sever (Hamburg apod.)
+                // Vynutí prázdninovou objížďku přes A72 (Zwickau) -> Lipsko (A14), aby se zcela vyhnula zakázané A9
+                if (startCoords.lng > 11.8 && startCoords.lat < 50.8 && endCoords.lat > 52.0) {
+                    midLat = 51.33; // Souřadnice Lipska (A72 / A14)
+                    midLng = 12.38;
+                }
+
                 routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
             } else {
                 routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
@@ -302,7 +308,6 @@
             startMarker = L.marker([startCoords.lat, startCoords.lng]).addTo(map).bindPopup(`<b>Start:</b> ${startText}`);
             endMarker = L.marker([endCoords.lat, endCoords.lng]).addTo(map).bindPopup(`<b>Cíl:</b> ${endText}`);
 
-            // Extrakce a vykreslení čísel silnic na trase
             const detectedRoads = new Set();
             if (route.legs) {
                 route.legs.forEach(leg => {
