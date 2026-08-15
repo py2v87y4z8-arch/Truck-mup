@@ -19,6 +19,14 @@
         .row > div { flex: 1; }
         button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #0369a1; }
+        
+        /* Karta s informacemi o trase */
+        .info-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin-top: 10px; }
+        .info-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-value { font-weight: bold; color: #f8fafc; }
+        .ban-warning { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; padding: 10px; font-size: 12px; color: #fca5a5; margin-top: 10px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -28,13 +36,13 @@
     <div class="subtitle">& Zákazy jízdy v Německu (Ferienreise)</div>
 
     <div>
-        <label>START (ŠÍŘKA, DÉLKA)</label>
-        <input type="text" id="startCoords" placeholder="50.0755, 14.4378" value="50.0755, 14.4378" />
+        <label>START (MĚSTO NEBO ADRESA)</label>
+        <input type="text" id="startLocation" placeholder="např. Praha" value="Praha" />
     </div>
 
     <div>
-        <label>CÍL (ŠÍŘKA, DÉLKA)</label>
-        <input type="text" id="endCoords" placeholder="53.5511, 9.9937" value="53.5511, 9.9937" />
+        <label>CÍL (MĚSTO NEBO ADRESA)</label>
+        <input type="text" id="endLocation" placeholder="např. Hamburg" value="Hamburg" />
     </div>
 
     <div class="row">
@@ -48,7 +56,24 @@
         </div>
     </div>
 
-    <button onclick="calculateRoute()">Spočítat přímou trasu (HGV)</button>
+    <button id="calcBtn" onclick="calculateRoute()">Spočítat trasu</button>
+
+    <!-- Přehled informací o trase -->
+    <div class="info-card">
+        <h3>Informace o trase</h3>
+        <div class="info-row">
+            <span>Vzdálenost:</span>
+            <span id="distVal" class="info-value">-- km</span>
+        </div>
+        <div class="info-row">
+            <span>Doba jízdy:</span>
+            <span id="timeVal" class="info-value">-- h -- min</span>
+        </div>
+    </div>
+
+    <div class="ban-warning">
+        <b>⚠️ Sobotní zákazy v DE:</b> Červené čárkované úseky označují dálnice se zákazovým omezením jízdy v sobotu v létě (07:00–20:00).
+    </div>
 </div>
 
 <div id="map"></div>
@@ -62,7 +87,6 @@
         maxZoom: 19
     }).addTo(map);
 
-    // Definice dálničních zákazových tras
     const germanBans = [
         { name: "A1 Zákaz jízdy", coords: [[53.86, 10.68], [53.55, 9.99], [53.07, 8.80], [51.51, 7.46], [50.93, 6.95]] },
         { name: "A2 Zákaz jízdy", coords: [[52.37, 9.73], [52.26, 10.52]] },
@@ -76,7 +100,6 @@
         { name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
     ];
 
-    // Funkce, která automaticky stáhne přesné zakřivení dálnic
     async function loadAccurateBans() {
         for (const ban of germanBans) {
             const coordsFormatted = ban.coords.map(c => `${c[1]},${c[0]}`).join(';');
@@ -96,28 +119,49 @@
         }
     }
 
-    // Načíst přesné dálnice při otevření stránky
     loadAccurateBans();
 
+    // Převod názvu města na souřadnice (Geocoding)
+    async function getCoordinates(query) {
+        // Pokud uživatel zadá přímo souřadnice (např. 50.07, 14.43)
+        const parts = query.split(',');
+        if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+            return { lat: parseFloat(parts[0].trim()), lng: parseFloat(parts[1].trim()) };
+        }
+
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        }
+        throw new Error(`Místo "${query}" nebylo nalezeno.`);
+    }
+
     let routeLayer;
+    let startMarker, endMarker;
 
     async function calculateRoute() {
-        const startInput = document.getElementById('startCoords').value.split(',');
-        const endInput = document.getElementById('endCoords').value.split(',');
+        const startText = document.getElementById('startLocation').value.trim();
+        const endText = document.getElementById('endLocation').value.trim();
+        const btn = document.getElementById('calcBtn');
 
-        if (startInput.length !== 2 || endInput.length !== 2) {
-            alert('Zadejte souřadnice ve tvaru: Šířka, Délka');
+        if (!startText || !endText) {
+            alert('Vyplňte prosím Start i Cíl.');
             return;
         }
 
-        const startLat = parseFloat(startInput[0].trim());
-        const startLng = parseFloat(startInput[1].trim());
-        const endLat = parseFloat(endInput[0].trim());
-        const endLng = parseFloat(endInput[1].trim());
-
-        const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+        btn.innerText = 'Vyhledávám...';
+        btn.disabled = true;
 
         try {
+            // 1. Získání souřadnic měst
+            const startCoords = await getCoordinates(startText);
+            const endCoords = await getCoordinates(endText);
+
+            // 2. Výpočet trasy z OSRM
+            const url = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`;
             const response = await fetch(url);
             if (!response.ok) throw new Error(`Chyba serveru (${response.status})`);
 
@@ -127,17 +171,36 @@
                 return;
             }
 
-            if (routeLayer) map.removeLayer(routeLayer);
+            const route = data.routes[0];
 
-            routeLayer = L.geoJSON(data.routes[0].geometry, {
+            // 3. Výpočet vzdálenosti a času
+            const distanceKm = (route.distance / 1000).toFixed(1);
+            const hours = Math.floor(route.duration / 3600);
+            const minutes = Math.round((route.duration % 3600) / 60);
+
+            document.getElementById('distVal').innerText = `${distanceKm} km`;
+            document.getElementById('timeVal').innerText = `${hours} h ${minutes} min`;
+
+            // 4. Vykreslení trasy a značek
+            if (routeLayer) map.removeLayer(routeLayer);
+            if (startMarker) map.removeLayer(startMarker);
+            if (endMarker) map.removeLayer(endMarker);
+
+            routeLayer = L.geoJSON(route.geometry, {
                 style: { color: '#0284c7', weight: 6, opacity: 0.9 }
             }).addTo(map);
+
+            startMarker = L.marker([startCoords.lat, startCoords.lng]).addTo(map).bindPopup(`<b>Start:</b> ${startText}`);
+            endMarker = L.marker([endCoords.lat, endCoords.lng]).addTo(map).bindPopup(`<b>Cíl:</b> ${endText}`);
 
             map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
         } catch (error) {
             console.error('Chyba při výpočtu:', error);
-            alert('Chyba výpočtu trasy: ' + error.message);
+            alert('Chyba: ' + error.message);
+        } finally {
+            btn.innerText = 'Spočítat trasu';
+            btn.disabled = false;
         }
     }
 </script>
