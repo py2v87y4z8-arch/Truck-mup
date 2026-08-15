@@ -19,7 +19,7 @@
             z-index: 1000; 
             overflow-y: auto; 
             border-right: 1px solid #1e293b; 
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, max-height 0.3s ease;
         }
         #map { flex: 1; height: 100%; width: 100%; }
         
@@ -69,18 +69,50 @@
             display: inline-block;
         }
 
-        .mobile-toggle-btn {
+        /* Spodní plovoucí lišta pro mobilní zařízení */
+        #mobileBottomBar {
             display: none;
-            background: #1e293b;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f172a;
+            border-top: 2px solid #0284c7;
+            padding: 10px 16px;
+            z-index: 1001;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .summary-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .summary-title {
+            font-size: 13px;
+            font-weight: bold;
             color: #38bdf8;
-            border: 1px solid #334155;
-            padding: 8px;
+        }
+
+        .summary-details {
+            font-size: 12px;
+            color: #e2e8f0;
+        }
+
+        .edit-btn {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 8px 14px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: bold;
-            text-align: center;
             cursor: pointer;
-            margin-bottom: 4px;
+            white-space: nowrap;
         }
 
         /* Mobilní optimalizace */
@@ -88,37 +120,58 @@
             body {
                 flex-direction: column-reverse;
             }
+
             #sidebar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 width: 100%;
-                max-height: 55vh;
+                max-height: 80vh;
                 border-right: none;
                 border-top: 2px solid #0284c7;
-                padding: 14px;
-                box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
+                padding: 16px;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.7);
+                border-radius: 16px 16px 0 0;
+                transform: translateY(0);
             }
+
+            /* Když je panel schovaný */
             #sidebar.collapsed {
-                max-height: 48px;
-                overflow: hidden;
-                padding: 8px 14px;
+                transform: translateY(100%);
             }
+
             #map {
-                height: 100%;
-                flex: 1;
+                height: 100vh;
+                width: 100vw;
             }
-            .mobile-toggle-btn {
-                display: block;
-            }
+
             input {
-                font-size: 16px; /* Zamezí iOS auto-zoomu při kliku do pole */
+                font-size: 16px; /* Zamezí automatickému zoomu na iOS */
+            }
+
+            #mobileBottomBar.active {
+                display: flex;
             }
         }
     </style>
 </head>
 <body>
 
+<!-- Plovoucí spodní lišta na mobilu -->
+<div id="mobileBottomBar" onclick="expandSidebar()">
+    <div class="summary-text">
+        <div id="barTitle" class="summary-title">Trasa připravena</div>
+        <div id="barDetails" class="summary-details">-- km | -- h -- min</div>
+    </div>
+    <button class="edit-btn">⚙️ Upravit / Detail</button>
+</div>
+
 <div id="sidebar">
-    <div class="mobile-toggle-btn" onclick="toggleSidebar()">▼ Skrýt / Zobrazit panel zadávání</div>
-    <h2>Truck Navigator</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Truck Navigator</h2>
+        <button id="closeSidebarBtn" onclick="collapseSidebar()" style="display: none; width: auto; padding: 6px 12px; margin: 0; background: #334155; font-size: 12px;">✕ Zavřít</button>
+    </div>
     <div class="subtitle">& Zákazy jízdy v Německu</div>
 
     <div>
@@ -205,9 +258,21 @@
         { code: "A99", name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
     ];
 
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
+    function collapseSidebar() {
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('mobileBottomBar').classList.add('active');
+            document.getElementById('closeSidebarBtn').style.display = 'none';
+            setTimeout(() => { map.invalidateSize(); }, 300);
+        }
+    }
+
+    function expandSidebar() {
+        document.getElementById('sidebar').classList.remove('collapsed');
+        document.getElementById('mobileBottomBar').classList.remove('active');
+        if (window.innerWidth <= 768) {
+            document.getElementById('closeSidebarBtn').style.display = 'block';
+        }
         setTimeout(() => { map.invalidateSize(); }, 300);
     }
 
@@ -344,17 +409,26 @@
             const hours = Math.floor(totalHoursDecimal);
             const minutes = Math.round((totalHoursDecimal - hours) * 60);
 
-            document.getElementById('distVal').innerText = `${distanceKm.toFixed(1)} km`;
-            document.getElementById('timeVal').innerText = `${hours} h ${minutes} min`;
+            const distStr = `${distanceKm.toFixed(1)} km`;
+            const timeStr = `${hours} h ${minutes} min`;
+
+            document.getElementById('distVal').innerText = distStr;
+            document.getElementById('timeVal').innerText = timeStr;
             
             const routeTypeEl = document.getElementById('routeTypeVal');
+            let routeTypeName = "Přímá trasa";
             if (useDetour) {
+                routeTypeName = "🟢 Objížďka";
                 routeTypeEl.innerText = "🟢 Objížďka (Mimo zákazy)";
                 routeTypeEl.style.color = "#4ade80";
             } else {
                 routeTypeEl.innerText = "🔵 Přímá trasa (Dálnice)";
                 routeTypeEl.style.color = "#38bdf8";
             }
+
+            // Aktualizace textu na mobilní liště
+            document.getElementById('barTitle').innerText = `${startText} ➔ ${endText}`;
+            document.getElementById('barDetails').innerText = `${routeTypeName} | ${distStr} | ${timeStr}`;
 
             if (routeLayer) map.removeLayer(routeLayer);
             if (startMarker) map.removeLayer(startMarker);
@@ -408,10 +482,8 @@
 
             map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
 
-            // Na mobilu po spočítání automaticky zasunout formulář pro lepší výhled na mapu
-            if (window.innerWidth <= 768) {
-                toggleSidebar();
-            }
+            // Automaticky schováme panel a zobrazíme spodní lištu na mobilu
+            collapseSidebar();
 
         } catch (error) {
             console.error('Chyba při výpočtu:', error);
