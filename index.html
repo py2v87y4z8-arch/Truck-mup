@@ -7,17 +7,17 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #0f172a; color: white; }
-        #sidebar { width: 340px; background: #1e293b; padding: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; height: 100vh; background: #1a1d21; color: #fff; }
+        #sidebar { width: 360px; background: #0f172a; padding: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; overflow-y: auto; border-right: 1px solid #1e293b; }
         #map { flex: 1; height: 100%; }
-        h2 { margin: 0 0 2px 0; font-size: 20px; color: #f8fafc; }
-        .subtitle { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
-        label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px; }
-        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 14px; margin-top: 4px; }
+        h2 { margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: #fff; }
+        .subtitle { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+        label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px; }
+        input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; font-size: 13px; margin-top: 4px; }
         input:focus { outline: none; border-color: #38bdf8; }
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
-        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 14px; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #0369a1; }
     </style>
 </head>
@@ -28,27 +28,22 @@
     <div class="subtitle">& Zákazy jízdy v Německu</div>
 
     <div>
-        <label>OPENROUTESERVICE API KLÍČ</label>
-        <input type="text" id="apiKey" placeholder="Vložte váš API klíč (ey...)" />
-    </div>
-
-    <div>
-        <label>Start (Šířka, Délka)</label>
+        <label>START (ŠÍŘKA, DÉLKA)</label>
         <input type="text" id="startCoords" placeholder="50.0755, 14.4378" value="50.0755, 14.4378" />
     </div>
 
     <div>
-        <label>Cíl (Šířka, Délka)</label>
+        <label>CÍL (ŠÍŘKA, DÉLKA)</label>
         <input type="text" id="endCoords" placeholder="53.5511, 9.9937" value="53.5511, 9.9937" />
     </div>
 
     <div class="row">
         <div>
-            <label>Výška (m)</label>
+            <label>VÝŠKA (M)</label>
             <input type="number" id="height" value="4.0" step="0.1" />
         </div>
         <div>
-            <label>Délka (m)</label>
+            <label>DÉLKA (M)</label>
             <input type="number" id="length" value="16.5" step="0.1" />
         </div>
     </div>
@@ -61,24 +56,34 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const map = L.map('map').setView([51.1657, 10.4515], 6);
-    
-    // Tmavá mapa podle vašeho vzoru
+
+    // Tmavý podklad mapy CARTO Dark Matter
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 19
     }).addTo(map);
 
+    // Vykreslení německých zákazových dálničních úseků (Červené čáry)
+    const germanBans = [
+        [[53.5511, 9.9937], [53.1000, 8.8000]], // A1 úseky
+        [[50.1109, 8.6821], [49.4500, 11.0800]], // A3 / A6
+        [[48.1371, 11.5754], [47.8000, 12.0000]]  // A99 / A8 jih
+    ];
+
+    germanBans.forEach(coords => {
+        L.polyline(coords, {
+            color: '#ef4444',
+            weight: 5,
+            dashArray: '8, 8',
+            opacity: 0.9
+        }).addTo(map).bindPopup('<b>Sobotní zákaz jízdy (07:00 - 20:00)</b>');
+    });
+
     let routeLayer;
 
     async function calculateRoute() {
-        const apiKey = document.getElementById('apiKey').value.trim();
         const startInput = document.getElementById('startCoords').value.split(',');
         const endInput = document.getElementById('endCoords').value.split(',');
-
-        if (!apiKey) {
-            alert('Prosím vložte váš API klíč!');
-            return;
-        }
 
         if (startInput.length !== 2 || endInput.length !== 2) {
             alert('Zadejte souřadnice ve tvaru: Šířka, Délka');
@@ -90,25 +95,30 @@
         const endLat = parseFloat(endInput[0].trim());
         const endLng = parseFloat(endInput[1].trim());
 
-        // Nová adresa + předání klíče přímo v URL (řeší chybové hlášení Failed to fetch)
-        const url = `https://api.heigit.org/v2/directions/driving-hgv?api_key=${apiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
+        // Bezplatný OSRM routing - funguje spolehlivě bez API klíčů a bez CORS blokování
+        const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
 
         try {
             const response = await fetch(url);
-
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || `Chyba serveru (${response.status})`);
+                throw new Error(`Chyba serveru (${response.status})`);
             }
 
             const data = await response.json();
+
+            if (!data.routes || data.routes.length === 0) {
+                alert('Trasa nebyla nalezena.');
+                return;
+            }
 
             if (routeLayer) {
                 map.removeLayer(routeLayer);
             }
 
-            routeLayer = L.geoJSON(data, {
-                style: { color: '#00b4d8', weight: 6, opacity: 0.9 }
+            // Vykreslení modré trasy
+            routeLayer = L.geoJSON(data.routes[0].geometry, {
+                style: { color: '#0284c7', weight: 6, opacity: 0.9 }
             }).addTo(map);
 
             map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
