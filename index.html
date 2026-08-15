@@ -32,11 +32,11 @@
     <div id="map"></div>
 
     <div id="filter-bar">
-        <button class="filter-btn active" onclick="filterMarkers('ALL')">Všechny zákazy</button>
-        <button class="filter-btn" onclick="filterMarkers('SUMMER')">☀️ Letní sobota (7-20h)</button>
-        <button class="filter-btn" onclick="filterMarkers('CLOSED')">🛑 Trvalé uzávěry</button>
-        <button class="filter-btn" onclick="filterMarkers('WEIGHT')">⚖️ Váha / Výška</button>
-        <button class="filter-btn" onclick="filterMarkers('ADR')">⚠️ Zákazy ADR</button>
+        <button class="filter-btn active" onclick="filterData('ALL')">Všechny zákazy</button>
+        <button class="filter-btn" onclick="filterData('SUMMER')">☀️ Letní sobota (Čáry dálnic)</button>
+        <button class="filter-btn" onclick="filterData('CLOSED')">🛑 Trvalé uzávěry</button>
+        <button class="filter-btn" onclick="filterData('WEIGHT')">⚖️ Váha / Výška</button>
+        <button class="filter-btn" onclick="filterData('ADR')">⚠️ Zákazy ADR</button>
     </div>
 
     <!-- Leaflet JS -->
@@ -49,185 +49,153 @@
             attribution: '© OpenStreetMap contributors, © CARTO'
         }).addTo(map);
 
-        const RESTRICTIONS = [
-            // --- LETNÍ PRÁZDNINOVÉ ZÁKAZY (Soboty 1.7. - 31.8. od 7:00 do 20:00) ---
+        // 1. DÁLNIČNÍ ÚSEKY PRO LETNÍ SOBOTY (ČÁRY / POLYLINES)
+        const SUMMER_HIGHWAYS = [
             {
-                id: "A1_SUMMER",
-                type: "SUMMER",
-                name: "A1 - Letní prázdninový zákaz",
-                coords: [51.5000, 7.5000],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na vybraných úsecích (Köln, Dortmund, Bremen, Hamburg).",
-                detour: "Využijte schválenou obchvatovou síť BGL (Ausweichstrecke)."
+                id: "A1",
+                name: "Dálnice A1 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úseky Köln – Dortmund – Bremen – Hamburg.",
+                detour: "Využijte doporučené obchvatové komunikace BGL.",
+                path: [
+                    [50.9375, 6.9603], [51.5136, 7.4653], [53.0793, 8.8017], [53.5511, 9.9937], [54.3233, 10.8716]
+                ]
             },
             {
-                id: "A3_SUMMER",
-                type: "SUMMER",
-                name: "A3 - Letní prázdninový zákaz",
-                coords: [50.1000, 8.6000],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na klíčových tranzitních úsecích (Oberhausen–Frankfurt–Nürnberg–Passau).",
-                detour: "Sledujte BGL trasy pro letní soboty."
+                id: "A3",
+                name: "Dálnice A3 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Oberhausen – Frankfurt – Nürnberg – Passau.",
+                detour: "Objízdné trasy přes A45 / A7 (mimo uzavřené úseky) nebo BGL doporučení.",
+                path: [
+                    [51.4708, 6.8600], [50.1109, 8.6821], [49.7913, 9.9535], [49.4521, 11.0767], [48.5667, 13.4667]
+                ]
             },
             {
-                id: "A5_SUMMER",
-                type: "SUMMER",
-                name: "A5 - Letní prázdninový zákaz",
-                coords: [49.0000, 8.4000],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) v úseku Darmstadt – Karlsruhe – Basel (hranice CH).",
-                detour: "Použijte doporučené objízdné tahy."
+                id: "A5",
+                name: "Dálnice A5 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Darmstadt – Karlsruhe – Basel.",
+                detour: "Použijte paralelní obchvatové cesty značené BGL.",
+                path: [
+                    [49.8728, 8.6512], [49.0069, 8.4037], [47.5596, 7.5886]
+                ]
             },
             {
-                id: "A7_SUMMER",
-                type: "SUMMER",
-                name: "A7 - Letní prázdninový zákaz",
-                coords: [52.3700, 9.7300],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) v úsecích Schleswig-Holstein, Hannover, Würzburg až po Füssen.",
-                detour: "Využijte BGL objízdné komunikace."
+                id: "A7",
+                name: "Dálnice A7 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Schleswig-Holstein – Hannover – Würzburg – Füssen.",
+                detour: "Využijte BGL schválené vedlejší tahy.",
+                path: [
+                    [54.7833, 9.4333], [53.5435, 9.9073], [52.3759, 9.7320], [50.8667, 9.7000], [49.7913, 9.9535], [47.5667, 10.7000]
+                ]
             },
             {
-                id: "A8_SUMMER",
-                type: "SUMMER",
-                name: "A8 - Letní prázdninový zákaz",
-                coords: [48.1300, 11.5700],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) Karlsruhe–Stuttgart–München–Salzburg.",
-                detour: "Doporučený odklon tranzitu mimo letní špičky."
+                id: "A8",
+                name: "Dálnice A8 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Karlsruhe – Stuttgart – München – Salzburg.",
+                detour: "Sledujte tranzitní objížďky BGL.",
+                path: [
+                    [49.0069, 8.4037], [48.7758, 9.1829], [48.1351, 11.5820], [47.8561, 12.1225]
+                ]
             },
             {
-                id: "A9_SUMMER",
-                type: "SUMMER",
-                name: "A9 - Letní prázdninový zákaz",
-                coords: [50.3000, 11.8000],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) na úsecích Berlín – Lipsko – Norimberk – Mnichov.",
-                detour: "Použijte vedlejší doporučené dálniční propojky."
+                id: "A9",
+                name: "Dálnice A9 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Potsdam – Leipzig – Nürnberg – München.",
+                detour: "Objezdové dálniční propojky.",
+                path: [
+                    [52.3000, 12.9000], [51.3400, 12.3700], [49.4521, 11.0767], [48.1351, 11.5820]
+                ]
             },
             {
-                id: "A61_SUMMER",
-                type: "SUMMER",
-                name: "A61 - Letní prázdninový zákaz",
-                coords: [50.3500, 7.5800],
-                detail: "Zákaz jízdy v letních sobotách (7:00-20:00) Mönchengladbach – Koblenz – Ludwigshafen.",
-                detour: "Objízdné trasy BGL."
+                id: "A61",
+                name: "Dálnice A61 - Letní prázdninový zákaz",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Mönchengladbach – Koblenz – Ludwigshafen.",
+                detour: "Tranzitní objížďky přes A3 / A61 alternace.",
+                path: [
+                    [51.1911, 6.4422], [50.3569, 7.5890], [49.4812, 8.4353]
+                ]
             },
             {
-                id: "A99_SUMMER",
-                type: "SUMMER",
-                name: "A99 - Obchvat Mnichova (Letní zákaz)",
-                coords: [48.2000, 11.6000],
-                detail: "Celý dálniční okruh Mnichova podléhá letnímu sobotnímu zákazu (7:00-20:00).",
-                detour: "Tranzitní obchvaty Bavorska."
-            },
-
-            // --- STÁVAJÍCÍ TRVALÁ OMEZENÍ A UZÁVĚRY ---
-            {
-                id: "A45",
-                type: "CLOSED",
-                name: "A45 - Talbrücke Rahmede",
-                coords: [51.2222, 7.6311],
-                detail: "Úplná uzávěra z důvodu novostavby mostu.",
-                detour: "Doporučená objížďka přes A1 / A3."
-            },
-            {
-                id: "A113",
-                type: "CLOSED",
-                name: "A113 - Berlín (směr Hamburg)",
-                coords: [52.4167, 13.5167],
-                detail: "Zákaz jízdy platí výhradně ve směru na Hamburg.",
-                detour: "Využijte Berlínský okruh A10."
-            },
-            {
-                id: "A73",
-                type: "WEIGHT",
-                name: "A73 - Norimberk (Městský úsek)",
-                coords: [49.4521, 11.0767],
-                detail: "Omezení maximální výšky vozidla na 3,90 m.",
-                detour: "Tranzitní objezd přes dálnici A9."
-            },
-            {
-                id: "A10",
-                type: "WEIGHT",
-                name: "A10 - Berlínský okruh",
-                coords: [52.3500, 13.0000],
-                detail: "Doporučení zcela minout centrum Berlína z důvodu stavebních prací a hmotnostních limitů.",
-                detour: "Využijte vnější obchvat A10."
-            },
-            {
-                id: "ELBTUNNEL",
-                type: "ADR",
-                name: "A7 - Elbtunnel (Hamburk)",
-                coords: [53.5435, 9.9073],
-                detail: "Zákaz průjezdu pro vozidla s označeným ADR nákladem v čase 05:00 - 23:00.",
-                detour: "Objízdný okruh A21 / B205."
-            },
-            {
-                id: "EMSTUNNEL",
-                type: "ADR",
-                name: "A31 - Emstunnel",
-                coords: [53.3183, 7.3750],
-                detail: "Zákaz průjezdu pro označená ADR vozidla v čase 05:00 - 23:00.",
-                detour: "Lokálně značená objízdná trasa."
-            },
-            {
-                id: "KANALTUNNEL",
-                type: "ADR",
-                name: "Kanaltunnel (Rendsburg)",
-                coords: [54.3000, 9.6833],
-                detail: "Celkový a trvalý zákaz průjezdu pro vozidla přepravující nebezpečný náklad.",
-                detour: "Trasa přes dálniční most A7 Rader Hochbrücke."
-            },
-            {
-                id: "B26",
-                type: "WEIGHT",
-                name: "B26 - Hösbach",
-                coords: [50.0036, 9.2053],
-                detail: "Zákaz průjezdu pro LKW nad 7,5 t celkové hmotnosti.",
-                detour: "Objížďka po dálnici A3 (křižovatka Hösbach/Aschaffenburg)."
-            },
-            {
-                id: "B19_B27_B8",
-                type: "WEIGHT",
-                name: "B19 / B27 / B8 - Oblast Würzburg",
-                coords: [49.7913, 9.9535],
-                detail: "Zákaz pro vozidla nad 12 t (úseky Würzburg-Höchberg a Unterpleichfeld-Werneck). Zákaz nad 3,5 t v samotném centru.",
-                detour: "Využijte dálniční obchvat A3 / A7."
-            },
-            {
-                id: "TREUENBRIETZEN",
-                type: "WEIGHT",
-                name: "Treuenbrietzen (B102)",
-                coords: [52.0964, 12.8711],
-                detail: "Úplná uzávěra průjezdu pro LKW nad 3,5 t.",
-                detour: "Vyznačená objízdná trasa přes B102, L812 a L80."
-            },
-            {
-                id: "OBERSCHLEISSHEIM",
-                type: "WEIGHT",
-                name: "Oberschleißheim",
-                coords: [48.2500, 11.5500],
-                detail: "Zákaz průjezdu pro nákladní vozidla od 7,5 t celkové hmotnosti.",
-                detour: "Objezd po dálnici A92 / A99."
-            },
-            {
-                id: "B62",
-                type: "WEIGHT",
-                name: "B62 - Bad Hersfeld / Sorga",
-                coords: [50.8667, 9.7000],
-                detail: "Dopravní komplikace, opravy podjezdů a váhově omezené mosty.",
-                detour: "Doporučeno využít dálnici A4 / A7."
+                id: "A99",
+                name: "Dálnice A99 - Obchvat Mnichova",
+                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Celý obchvat Mnichova.",
+                detour: "Doporučeno vyhnout se oblasti Mnichova.",
+                path: [
+                    [48.1000, 11.4500], [48.2500, 11.6500], [48.1000, 11.7500]
+                ]
             }
         ];
 
-        let loadedMarkers = [];
+        // 2. BODOVÁ OMEZENÍ A UZÁVĚRY (MARKERY)
+        const POINT_RESTRICTIONS = [
+            {
+                id: "A45", type: "CLOSED", name: "A45 - Talbrücke Rahmede", coords: [51.2222, 7.6311],
+                detail: "Úplná uzávěra z důvodu novostavby mostu.", detour: "Doporučená objížďka přes A1 / A3."
+            },
+            {
+                id: "A113", type: "CLOSED", name: "A113 - Berlín (směr Hamburg)", coords: [52.4167, 13.5167],
+                detail: "Zákaz jízdy platí výhradně ve směru na Hamburg.", detour: "Využijte Berlínský okruh A10."
+            },
+            {
+                id: "A73", type: "WEIGHT", name: "A73 - Norimberk", coords: [49.4521, 11.0767],
+                detail: "Omezení maximální výšky vozidla na 3,90 m.", detour: "Tranzitní objezd přes dálnici A9."
+            },
+            {
+                id: "ELBTUNNEL", type: "ADR", name: "A7 - Elbtunnel (Hamburk)", coords: [53.5435, 9.9073],
+                detail: "Zákaz průjezdu pro vozidla s ADR v čase 05:00 - 23:00.", detour: "Objízdný okruh A21 / B205."
+            },
+            {
+                id: "KANALTUNNEL", type: "ADR", name: "Kanaltunnel (Rendsburg)", coords: [54.3000, 9.6833],
+                detail: "Celkový a trvalý zákaz průjezdu pro vozidla s ADR.", detour: "Trasa přes most A7 Rader Hochbrücke."
+            },
+            {
+                id: "B26", type: "WEIGHT", name: "B26 - Hösbach", coords: [50.0036, 9.2053],
+                detail: "Zákaz průjezdu pro LKW nad 7,5 t.", detour: "Objížďka po dálnici A3."
+            },
+            {
+                id: "B19_B27_B8", type: "WEIGHT", name: "B19 / B27 / B8 - Oblast Würzburg", coords: [49.7913, 9.9535],
+                detail: "Zákaz pro vozidla nad 12 t / 3,5 t v centru.", detour: "Využijte dálniční obchvat A3 / A7."
+            }
+        ];
 
-        function renderMarkers(filterType = 'ALL') {
-            loadedMarkers.forEach(m => map.removeLayer(m));
-            loadedMarkers = [];
+        let activeLayers = [];
 
-            RESTRICTIONS.forEach(item => {
+        function clearLayers() {
+            activeLayers.forEach(l => map.removeLayer(l));
+            activeLayers = [];
+        }
+
+        function filterData(filterType) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            clearLayers();
+
+            // Vykreslení čar dálnic (Letní sobotní zákaz)
+            if (filterType === 'ALL' || filterType === 'SUMMER') {
+                SUMMER_HIGHWAYS.forEach(hw => {
+                    const polyline = L.polyline(hw.path, {
+                        color: '#f59e0b',
+                        weight: 6,
+                        opacity: 0.8
+                    }).addTo(map);
+
+                    const popupContent = `
+                        <div class="popup-title">${hw.name}</div>
+                        <span class="popup-badge">☀️ LETNÍ SOBOTNÍ ZÁKAZ</span>
+                        <div>${hw.detail}</div>
+                        <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${hw.detour}</div>
+                    `;
+                    polyline.bindPopup(popupContent);
+                    activeLayers.push(polyline);
+                });
+            }
+
+            // Vykreslení bodových značek
+            POINT_RESTRICTIONS.forEach(item => {
                 if (filterType !== 'ALL' && item.type !== filterType) return;
 
-                let color = "#ef4444"; // Červená pro uzávěry
-                if (item.type === "SUMMER") color = "#eab308"; // Žlutá pro letní zákaz
-                if (item.type === "WEIGHT") color = "#f59e0b"; // Oranžová pro váhu
-                if (item.type === "ADR") color = "#3b82f6"; // Modrá pro ADR
+                let color = "#ef4444";
+                if (item.type === "WEIGHT") color = "#f59e0b";
+                if (item.type === "ADR") color = "#3b82f6";
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
@@ -237,26 +205,19 @@
                 });
 
                 const marker = L.marker(item.coords, { icon: customIcon }).addTo(map);
-
                 const popupHtml = `
                     <div class="popup-title">${item.name}</div>
-                    <span class="popup-badge">${item.type === 'SUMMER' ? '☀️ LETNÍ ZÁKAZ (SOBOTA)' : item.type}</span>
+                    <span class="popup-badge">${item.type}</span>
                     <div>${item.detail}</div>
-                    <div class="popup-detour"><b>🛠️ Objížďka / Doporučení BGL:</b><br>${item.detour}</div>
+                    <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${item.detour}</div>
                 `;
-
                 marker.bindPopup(popupHtml);
-                loadedMarkers.push(marker);
+                activeLayers.push(marker);
             });
         }
 
-        function filterMarkers(type) {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            renderMarkers(type);
-        }
-
-        renderMarkers();
+        // Výchozí zobrazení
+        filterData('ALL');
     </script>
 </body>
 </html>
