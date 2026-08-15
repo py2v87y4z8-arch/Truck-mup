@@ -133,6 +133,7 @@
     const banLayerGroup = L.layerGroup().addTo(map);
     const routeBadgesLayerGroup = L.layerGroup().addTo(map);
 
+    // Zákazy jízdy s rozbalenou A9 až ke křižovatce s A10 před Berlínem
     const germanBans = [
         { code: "A1", name: "A1 Zákaz jízdy", coords: [[53.86, 10.68], [53.55, 9.99], [53.07, 8.80], [51.51, 7.46], [50.93, 6.95]] },
         { code: "A2", name: "A2 Zákaz jízdy", coords: [[52.37, 9.73], [52.26, 10.52]] },
@@ -141,7 +142,7 @@
         { code: "A6", name: "A6 Zákaz jízdy", coords: [[49.48, 8.46], [49.14, 9.21], [49.45, 11.08]] },
         { code: "A7", name: "A7 Zákaz jízdy", coords: [[53.55, 9.99], [52.37, 9.73], [51.31, 9.49], [49.79, 9.93], [47.56, 10.70]] },
         { code: "A8", name: "A8 Zákaz jízdy", coords: [[49.00, 8.40], [48.77, 9.18], [48.13, 11.57], [47.80, 12.00]] },
-        { code: "A9", name: "A9 Zákaz jízdy", coords: [[51.34, 12.37], [49.45, 11.08], [48.13, 11.57]] },
+        { code: "A9", name: "A9 Zákaz jízdy (až k Berlínu)", coords: [[52.30, 12.97], [51.34, 12.37], [49.45, 11.08], [48.13, 11.57]] },
         { code: "A61", name: "A61 Zákaz jízdy", coords: [[50.35, 7.59], [49.53, 8.35]] },
         { code: "A99", name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
     ];
@@ -249,11 +250,11 @@
             let routeUrl = '';
 
             if (useDetour) {
-                // Vynucení objížďky z Chebska / Západních Čech po A72 -> Zwickau -> A14 -> Lipsko
+                // Přesné souřadnice ležící bezpečně v tělese dálnice (A72 u Zwickau a A14 u Lipska)
                 if (startCoords.lng > 11.8 && startCoords.lat < 51.0 && endCoords.lat > 52.0) {
-                    const a72Zwickau = "12.44,50.66"; // Průjezdní bod A72 u Zwickau
-                    const a14Leipzig = "12.42,51.39"; // Průjezdní bod A14 u Lipska
-                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${a72Zwickau};${a14Leipzig};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
+                    const a72Point = "12.4277,50.6375"; // Přímo na jízdním pruhu A72
+                    const a14Point = "12.3850,51.3650"; // Přímo na jízdním pruhu A14
+                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${a72Point};${a14Point};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
                 } else {
                     let midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
                     let midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
