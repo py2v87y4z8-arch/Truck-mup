@@ -1,651 +1,116 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Truck Map - Kamionová navigace & Zákazy jízdy v Evropě</title>
-  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      background-color: #0f172a;
-      color: #f8fafc;
-    }
-
-    #sidebar {
-      width: 420px;
-      min-width: 360px;
-      background: #1e293b;
-      display: flex;
-      flex-direction: column;
-      z-index: 1000;
-      box-shadow: 4px 0 25px rgba(0, 0, 0, 0.4);
-      border-right: 1px solid #334155;
-    }
-
-    .header {
-      padding: 18px 20px;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border-bottom: 1px solid #334155;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .header i {
-      font-size: 24px;
-      color: #38bdf8;
-    }
-
-    .header h1 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: #f8fafc;
-    }
-
-    .header p {
-      font-size: 0.75rem;
-      color: #94a3b8;
-    }
-
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .card {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 14px 16px;
-    }
-
-    .card-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #38bdf8;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .input-group {
-      margin-bottom: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .input-group:last-child {
-      margin-bottom: 0;
-    }
-
-    label {
-      font-size: 0.78rem;
-      color: #cbd5e1;
-      font-weight: 500;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 9px 12px;
-      background: #1e293b;
-      border: 1px solid #475569;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 0.85rem;
-      outline: none;
-      transition: all 0.2s;
-    }
-
-    input:focus, select:focus {
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 10px 14px;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: #0284c7;
-      color: #ffffff;
-    }
-
-    .btn-primary:hover {
-      background: #0369a1;
-    }
-
-    .btn-warning {
-      background: #d97706;
-      color: #ffffff;
-    }
-
-    .btn-warning:hover {
-      background: #b45309;
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-size: 0.82rem;
-      color: #e2e8f0;
-      user-select: none;
-      margin-bottom: 8px;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: #38bdf8;
-      cursor: pointer;
-    }
-
-    #route-summary {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      background: #162032;
-      border: 1px solid #0284c7;
-      border-radius: 8px;
-      padding: 12px;
-    }
-
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.83rem;
-    }
-
-    .summary-value {
-      font-weight: 700;
-      color: #38bdf8;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.78rem;
-      margin-bottom: 6px;
-    }
-
-    .legend-color {
-      width: 18px;
-      height: 6px;
-      border-radius: 3px;
-    }
-
-    #map {
-      flex: 1;
-      height: 100%;
-      background: #090d16;
-    }
-
-    .notice {
-      font-size: 0.72rem;
-      color: #94a3b8;
-      line-height: 1.4;
-      background: #0284c715;
-      border-left: 3px solid #0284c7;
-      padding: 8px 10px;
-      border-radius: 0 4px 4px 0;
-    }
-
-    .directions-list {
-      max-height: 180px;
-      overflow-y: auto;
-      font-size: 0.78rem;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding-right: 4px;
-    }
-
-    .direction-step {
-      padding: 6px 8px;
-      background: #1e293b;
-      border-radius: 4px;
-      border-left: 2px solid #38bdf8;
-      line-height: 1.3;
-    }
-
-    .leaflet-popup-content-wrapper {
-      background: #1e293b !important;
-      color: #f8fafc !important;
-      border: 1px solid #475569;
-      border-radius: 8px;
-    }
-    .leaflet-popup-tip {
-      background: #1e293b !important;
-    }
-
-    @media (max-width: 768px) {
-      body {
-        flex-direction: column;
-      }
-      #sidebar {
-        width: 100%;
-        height: 50vh;
-      }
-      #map {
-        height: 50vh;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Map - Kamionová navigace</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; }
+        #sidebar { width: 320px; background: #1e293b; color: white; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        #map { flex: 1; height: 100%; }
+        input, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+        button { background: #0284c7; cursor: pointer; font-weight: bold; border: none; margin-top: 10px; }
+        button:hover { background: #0369a1; }
+        .label { font-size: 12px; color: #94a3b8; margin-bottom: -5px; }
+    </style>
 </head>
 <body>
 
-  <div id="sidebar">
-    <div class="header">
-      <i class="fa-solid fa-truck-fast"></i>
-      <div>
-        <h1>Truck Route Navigator</h1>
-        <p>Kamionová navigace & Zákazy jízdy v Německu</p>
-      </div>
-    </div>
+<div id="sidebar">
+    <h2>Truck Navigation</h2>
+    
+    <div class="label">API Klíč (HeiGIT / OpenRouteService)</div>
+    <input type="text" id="apiKey" placeholder="Vložte váš API klíč (ey...)" />
 
-    <div class="content">
+    <div class="label">Start (Zeměpisná šířka, délka)</div>
+    <input type="text" id="startCoords" placeholder="např. 50.0755, 14.4378" value="50.0755, 14.4378" />
 
-      <!-- API Key Card -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-solid fa-key"></i> OpenRouteService API Klíč
-        </div>
-        <div class="input-group">
-          <input type="password" id="api-key" placeholder="Vložte Váš API klíč z openrouteservice.org" value="">
-        </div>
-        <div class="notice">
-          Pro výpočet trasy po reálných dálnicích si vytvořte bezplatný klíč na <strong>openrouteservice.org</strong>.
-        </div>
-      </div>
+    <div class="label">Cíl (Zeměpisná šířka, délka)</div>
+    <input type="text" id="endCoords" placeholder="např. 52.5200, 13.4050" value="52.5200, 13.4050" />
 
-      <!-- Route Planner Card -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-solid fa-route"></i> Plánování trasy
-        </div>
+    <button onclick="calculateRoute()">Spočítat trasu pro kamion</button>
+</div>
 
-        <div class="input-group">
-          <label><i class="fa-solid fa-location-dot" style="color: #4ade80;"></i> Start (Odkud)</label>
-          <input type="text" id="start-input" placeholder="např. Hamburg" value="Hamburg, Germany">
-        </div>
+<div id="map"></div>
 
-        <div class="input-group">
-          <label><i class="fa-solid fa-location-dot" style="color: #f87171;"></i> Cíl (Kam)</label>
-          <input type="text" id="end-input" placeholder="např. München" value="München, Germany">
-        </div>
-
-        <!-- Truck Parameters Grid -->
-        <div class="grid-2" style="margin-top: 8px;">
-          <div class="input-group">
-            <label>Hmotnost (t)</label>
-            <input type="number" id="truck-weight" value="40" step="0.5">
-          </div>
-          <div class="input-group">
-            <label>Výška (m)</label>
-            <input type="number" id="truck-height" value="4.0" step="0.1">
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="input-group">
-            <label>Šířka (m)</label>
-            <input type="number" id="truck-width" value="2.55" step="0.05">
-          </div>
-          <div class="input-group">
-            <label>Délka (m)</label>
-            <input type="number" id="truck-length" value="16.5" step="0.5">
-          </div>
-        </div>
-
-        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn btn-primary" onclick="calculateRoute(false)">
-            <i class="fa-solid fa-truck"></i> Spočítat přímou trasu (HGV)
-          </button>
-          <button class="btn btn-warning" onclick="calculateRoute(true)">
-            <i class="fa-solid fa-shield-halved"></i> Objíždět zakázané úseky dálnic
-          </button>
-        </div>
-      </div>
-
-      <!-- Truck Bans & Overlays Card -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-solid fa-ban"></i> Vrstvy & Zákazy jízdy
-        </div>
-
-        <label class="checkbox-group">
-          <input type="checkbox" id="toggle-bans" checked onchange="toggleBansLayer()">
-          <span>Zobrazit letní zákazy v SRN (Ferienreiseverordnung)</span>
-        </label>
-
-        <div style="margin-top: 8px;">
-          <div class="legend-item">
-            <div class="legend-color" style="background: #ef4444;"></div>
-            <span>Zakázaný úsek dálnice (A1, A3, A7, A8...)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: #38bdf8;"></div>
-            <span>Standardní kamionová trasa (HGV)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: #22c55e;"></div>
-            <span>Objízdná trasa (mimo zákazy)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Route Summary Card -->
-      <div id="route-summary">
-        <div class="card-title" style="margin-bottom: 6px; color: #f8fafc;">
-          <i class="fa-solid fa-circle-info"></i> Souhrn vypočtené trasy
-        </div>
-        <div class="summary-item">
-          <span>Typ trasy:</span>
-          <span class="summary-value" id="res-type">-</span>
-        </div>
-        <div class="summary-item">
-          <span>Celková vzdálenost:</span>
-          <span class="summary-value" id="res-distance">- km</span>
-        </div>
-        <div class="summary-item">
-          <span>Odhadovaný čas:</span>
-          <span class="summary-value" id="res-time">- h - min</span>
-        </div>
-
-        <div style="margin-top: 8px; font-weight: 600; font-size: 0.8rem; color: #cbd5e1;">Itinerář / Odbočky:</div>
-        <div class="directions-list" id="directions-container">
-          <div style="color: #94a3b8;">Spusťte výpočet trasy...</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <div id="map"></div>
-
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <script>
-    // Initialize Map on Germany
-    const map = L.map('map', {
-      zoomControl: false
-    }).setView([51.1657, 10.4515], 6);
-
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    // Dark Tile Layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO | Routing by OpenRouteService',
-      subdomains: 'abcd',
-      maxZoom: 19
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Inicializace mapy
+    const map = L.map('map').setView([51.1657, 10.4515], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    let routeLayer = null;
-    let banLayersGroup = L.layerGroup().addTo(map);
-    let startMarker = null;
-    let endMarker = null;
+    let routeLayer;
 
-    // Preset German Summer Truck Bans
-    const germanBanSections = [
-      {
-        name: "A1: Köln-West - Leverkusen / Wuppertal",
-        coords: [[50.932, 6.848], [51.028, 6.985], [51.258, 7.151]],
-        bbox: [[[6.80, 50.90], [7.20, 51.30]]]
-      },
-      {
-        name: "A3: Oberhausen - Frankfurt - Würzburg - Nürnberg",
-        coords: [[50.041, 8.563], [49.988, 9.152], [49.782, 9.932], [49.450, 11.080]],
-        bbox: [[[8.50, 49.90], [11.20, 50.10]]]
-      },
-      {
-        name: "A7: Soltau - Hannover - Hildesheim",
-        coords: [[53.000, 9.850], [52.375, 9.880], [52.150, 10.000]],
-        bbox: [[[9.80, 52.10], [10.10, 53.10]]]
-      },
-      {
-        name: "A7: Schweinfurt/Werneck - Biebelried - Uffenheim",
-        coords: [[50.000, 10.050], [49.760, 10.080], [49.540, 10.230]],
-        bbox: [[[10.00, 49.50], [10.30, 50.10]]]
-      },
-      {
-        name: "A8: Karlsruhe - Stuttgart - Ulm - München",
-        coords: [[48.850, 8.580], [48.690, 9.150], [48.450, 9.980], [48.200, 11.350]],
-        bbox: [[[8.50, 48.10], [11.40, 48.90]]]
-      },
-      {
-        name: "A9: Berlin/Potsdam - Nürnberg - München",
-        coords: [[50.400, 11.800], [49.550, 11.200], [48.250, 11.600]],
-        bbox: [[[11.10, 48.20], [11.90, 50.50]]]
-      },
-      {
-        name: "A61: Meckenheim - Koblenz - Ludwigshafen",
-        coords: [[50.620, 7.020], [50.350, 7.550], [49.530, 8.350]],
-        bbox: [[[7.00, 49.50], [8.40, 50.70]]]
-      }
-    ];
+    async function calculateRoute() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const startInput = document.getElementById('startCoords').value.split(',');
+        const endInput = document.getElementById('endCoords').value.split(',');
 
-    function drawTruckBans() {
-      banLayersGroup.clearLayers();
-      germanBanSections.forEach(section => {
-        const polyline = L.polyline(section.coords, {
-          color: '#ef4444',
-          weight: 6,
-          opacity: 0.85,
-          dashArray: '10, 8'
-        });
-        polyline.bindPopup(`
-          <div style="font-size:0.85rem;">
-            <strong style="color:#ef4444;"><i class="fa-solid fa-ban"></i> Zákaz jízdy kamionů (SRN)</strong><br>
-            <strong>Úsek:</strong> ${section.name}<br>
-            <small style="color:#94a3b8;">Platnost: Soboty 1.7. - 31.8. (7:00 - 20:00) & Neděle/Svatky</small>
-          </div>
-        `);
-        banLayersGroup.addLayer(polyline);
-      });
-    }
+        if (!apiKey) {
+            alert('Prosím vložte váš API klíč!');
+            return;
+        }
 
-    drawTruckBans();
+        if (startInput.length !== 2 || endInput.length !== 2) {
+            alert('Zadejte souřadnice ve tvaru: Šířka, Délka');
+            return;
+        }
 
-    function toggleBansLayer() {
-      const isChecked = document.getElementById('toggle-bans').checked;
-      if (isChecked) {
-        map.addLayer(banLayersGroup);
-      } else {
-        map.removeLayer(banLayersGroup);
-      }
-    }
+        const startLat = parseFloat(startInput[0].trim());
+        const startLng = parseFloat(startInput[1].trim());
+        const endLat = parseFloat(endInput[0].trim());
+        const endLng = parseFloat(endInput[1].trim());
 
-    async function geocode(query) {
-      const coordRegex = /^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/;
-      if (coordRegex.test(query.trim())) {
-        const parts = query.split(',').map(n => parseFloat(n.trim()));
-        return [parts[1], parts[0]];
-      }
+        // NOVÁ AKTUALIZOVANÁ ADRESA HEIGIT (Nahradila starou api.openrouteservice.org)
+        const url = 'https://api.heigit.org/v2/directions/driving-hgv/geojson';
 
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return [parseFloat(data[0].lon), parseFloat(data[0].lat)];
-      } else {
-        throw new Error(`Místo nebylo nalezeno: "${query}"`);
-      }
-    }
-
-    async function calculateRoute(avoidBans = false) {
-      const apiKey = document.getElementById('api-key').value.trim();
-      if (!apiKey) {
-        alert('Prosím vložte Váš OpenRouteService API klíč do pole nahoře.');
-        return;
-      }
-
-      const startText = document.getElementById('start-input').value.trim();
-      const endText = document.getElementById('end-input').value.trim();
-
-      if (!startText || !endText) {
-        alert('Prosím vyplňte výchozí i cílové místo.');
-        return;
-      }
-
-      const weight = parseFloat(document.getElementById('truck-weight').value) || 40;
-      const height = parseFloat(document.getElementById('truck-height').value) || 4.0;
-      const width = parseFloat(document.getElementById('truck-width').value) || 2.55;
-      const length = parseFloat(document.getElementById('truck-length').value) || 16.5;
-
-      try {
-        const startCoords = await geocode(startText);
-        const endCoords = await geocode(endText);
-
-        if (startMarker) map.removeLayer(startMarker);
-        if (endMarker) map.removeLayer(endMarker);
-
-        startMarker = L.marker([startCoords[1], startCoords[0]], {
-          icon: L.divIcon({
-            html: '<i class="fa-solid fa-location-dot" style="color:#4ade80; font-size:28px;"></i>',
-            className: 'custom-map-icon',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28]
-          })
-        }).addTo(map).bindPopup('<b>Start:</b> ' + startText);
-
-        endMarker = L.marker([endCoords[1], endCoords[0]], {
-          icon: L.divIcon({
-            html: '<i class="fa-solid fa-location-dot" style="color:#f87171; font-size:28px;"></i>',
-            className: 'custom-map-icon',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28]
-          })
-        }).addTo(map).bindPopup('<b>Cíl:</b> ' + endText);
-
-        const bodyPayload = {
-          coordinates: [startCoords, endCoords],
-          profile: 'driving-hgv',
-          format: 'geojson',
-          units: 'km',
-          language: 'cs',
-          options: {
-            profile_params: { weight, height, width, length }
-          }
+        const bodyData = {
+            coordinates: [
+                [startLng, startLat], // ORS vyžaduje pořadí [Délka, Šířka]
+                [endLng, endLat]
+            ]
         };
 
-        if (avoidBans) {
-          let allAvoidPolygons = [];
-          germanBanSections.forEach(sec => {
-            sec.bbox.forEach(b => {
-              const minLon = b[0][0], minLat = b[0][1];
-              const maxLon = b[1][0], maxLat = b[1][1];
-              allAvoidPolygons.push([
-                [minLon, minLat], [maxLon, minLat],
-                [maxLon, maxLat], [minLon, maxLat],
-                [minLon, minLat]
-              ]);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': apiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, application/geo+json'
+                },
+                body: JSON.stringify(bodyData)
             });
-          });
 
-          bodyPayload.options.avoid_polygons = {
-            type: "MultiPolygon",
-            coordinates: [allAvoidPolygons]
-          };
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `Chyba serveru: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Odstranění staré trasy z mapy
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+
+            // Vykreslení nové trasy
+            routeLayer = L.geoJSON(data, {
+                style: { color: '#0284c7', weight: 6, opacity: 0.8 }
+            }).addTo(map);
+
+            // Přizpůsobení pohledu mapy na trasu
+            map.fitBounds(routeLayer.getBounds());
+
+        } catch (error) {
+            console.error('Chyba při výpočtu trasy:', error);
+            alert('Chyba výpočtu trasy: ' + error.message);
         }
-
-        const response = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': apiKey
-          },
-          body: JSON.stringify(bodyPayload)
-        });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error ? errData.error.message : 'Chyba při komunikaci s API');
-        }
-
-        const routeData = await response.json();
-
-        if (routeLayer) map.removeLayer(routeLayer);
-
-        const routeColor = avoidBans ? '#22c55e' : '#38bdf8';
-
-        routeLayer = L.geoJSON(routeData, {
-          style: { color: routeColor, weight: 6, opacity: 0.9 }
-        }).addTo(map);
-
-        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
-
-        const properties = routeData.features[0].properties;
-        const summary = properties.summary;
-        
-        document.getElementById('route-summary').style.display = 'flex';
-        document.getElementById('res-type').textContent = avoidBans ? 'Objízdná trasa (bez zákazů)' : 'Přímá kamionová trasa (HGV)';
-        document.getElementById('res-type').style.color = routeColor;
-        document.getElementById('res-distance').textContent = summary.distance.toFixed(1) + ' km';
-        
-        const hours = Math.floor(summary.duration / 3600);
-        const mins = Math.round((summary.duration % 3600) / 60);
-        document.getElementById('res-time').textContent = `${hours} h ${mins} min`;
-
-        const directionsContainer = document.getElementById('directions-container');
-        directionsContainer.innerHTML = '';
-        
-        if (properties.segments && properties.segments[0].steps) {
-          properties.segments[0].steps.forEach((step, idx) => {
-            const stepEl = document.createElement('div');
-            stepEl.className = 'direction-step';
-            stepEl.innerHTML = `<strong>${idx + 1}.</strong> ${step.instruction} <span style="color:#38bdf8;">(${step.distance.toFixed(1)} km)</span>`;
-            directionsContainer.appendChild(stepEl);
-          });
-        }
-
-      } catch (err) {
-        alert('Chyba výpočtu trasy: ' + err.message);
-      }
     }
-  </script>
+</script>
+
 </body>
 </html>
