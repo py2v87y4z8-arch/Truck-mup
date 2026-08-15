@@ -33,7 +33,7 @@
 
     <div id="filter-bar">
         <button class="filter-btn active" onclick="filterData('ALL')">Všechny zákazy</button>
-        <button class="filter-btn" onclick="filterData('SUMMER')">☀️ Letní sobota (Čáry dálnic)</button>
+        <button class="filter-btn" onclick="filterData('SUMMER')">☀️ Letní sobota (Přesné dálnice)</button>
         <button class="filter-btn" onclick="filterData('CLOSED')">🛑 Trvalé uzávěry</button>
         <button class="filter-btn" onclick="filterData('WEIGHT')">⚖️ Váha / Výška</button>
         <button class="filter-btn" onclick="filterData('ADR')">⚠️ Zákazy ADR</button>
@@ -49,83 +49,52 @@
             attribution: '© OpenStreetMap contributors, © CARTO'
         }).addTo(map);
 
-        // 1. DÁLNIČNÍ ÚSEKY PRO LETNÍ SOBOTY (ČÁRY / POLYLINES)
+        // Klíčové uzly dálnic pro přesné trasování skrze OSRM/OSM
         const SUMMER_HIGHWAYS = [
             {
                 id: "A1",
                 name: "Dálnice A1 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úseky Köln – Dortmund – Bremen – Hamburg.",
                 detour: "Využijte doporučené obchvatové komunikace BGL.",
-                path: [
-                    [50.9375, 6.9603], [51.5136, 7.4653], [53.0793, 8.8017], [53.5511, 9.9937], [54.3233, 10.8716]
-                ]
+                waypoints: [[6.9603, 50.9375], [7.4653, 51.5136], [8.8017, 53.0793], [9.9937, 53.5511]]
             },
             {
                 id: "A3",
                 name: "Dálnice A3 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Oberhausen – Frankfurt – Nürnberg – Passau.",
-                detour: "Objízdné trasy přes A45 / A7 (mimo uzavřené úseky) nebo BGL doporučení.",
-                path: [
-                    [51.4708, 6.8600], [50.1109, 8.6821], [49.7913, 9.9535], [49.4521, 11.0767], [48.5667, 13.4667]
-                ]
+                detour: "Objízdné trasy přes A45 / A7 nebo BGL doporučení.",
+                waypoints: [[6.8600, 51.4708], [8.6821, 50.1109], [9.9535, 49.7913], [11.0767, 49.4521], [13.4667, 48.5667]]
             },
             {
                 id: "A5",
                 name: "Dálnice A5 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Darmstadt – Karlsruhe – Basel.",
                 detour: "Použijte paralelní obchvatové cesty značené BGL.",
-                path: [
-                    [49.8728, 8.6512], [49.0069, 8.4037], [47.5596, 7.5886]
-                ]
+                waypoints: [[8.6512, 49.8728], [8.4037, 49.0069], [7.5886, 47.5596]]
             },
             {
                 id: "A7",
                 name: "Dálnice A7 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Schleswig-Holstein – Hannover – Würzburg – Füssen.",
                 detour: "Využijte BGL schválené vedlejší tahy.",
-                path: [
-                    [54.7833, 9.4333], [53.5435, 9.9073], [52.3759, 9.7320], [50.8667, 9.7000], [49.7913, 9.9535], [47.5667, 10.7000]
-                ]
+                waypoints: [[9.4333, 54.7833], [9.9073, 53.5435], [9.7320, 52.3759], [9.7000, 50.8667], [9.9535, 49.7913], [10.7000, 47.5667]]
             },
             {
                 id: "A8",
                 name: "Dálnice A8 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Karlsruhe – Stuttgart – München – Salzburg.",
                 detour: "Sledujte tranzitní objížďky BGL.",
-                path: [
-                    [49.0069, 8.4037], [48.7758, 9.1829], [48.1351, 11.5820], [47.8561, 12.1225]
-                ]
+                waypoints: [[8.4037, 49.0069], [9.1829, 48.7758], [11.5820, 48.1351], [12.1225, 47.8561]]
             },
             {
                 id: "A9",
                 name: "Dálnice A9 - Letní prázdninový zákaz",
                 detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Potsdam – Leipzig – Nürnberg – München.",
                 detour: "Objezdové dálniční propojky.",
-                path: [
-                    [52.3000, 12.9000], [51.3400, 12.3700], [49.4521, 11.0767], [48.1351, 11.5820]
-                ]
-            },
-            {
-                id: "A61",
-                name: "Dálnice A61 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Mönchengladbach – Koblenz – Ludwigshafen.",
-                detour: "Tranzitní objížďky přes A3 / A61 alternace.",
-                path: [
-                    [51.1911, 6.4422], [50.3569, 7.5890], [49.4812, 8.4353]
-                ]
-            },
-            {
-                id: "A99",
-                name: "Dálnice A99 - Obchvat Mnichova",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Celý obchvat Mnichova.",
-                detour: "Doporučeno vyhnout se oblasti Mnichova.",
-                path: [
-                    [48.1000, 11.4500], [48.2500, 11.6500], [48.1000, 11.7500]
-                ]
+                waypoints: [[12.9000, 52.3000], [12.3700, 51.3400], [11.0767, 49.4521], [11.5820, 48.1351]]
             }
         ];
 
-        // 2. BODOVÁ OMEZENÍ A UZÁVĚRY (MARKERY)
         const POINT_RESTRICTIONS = [
             {
                 id: "A45", type: "CLOSED", name: "A45 - Talbrücke Rahmede", coords: [51.2222, 7.6311],
@@ -164,29 +133,50 @@
             activeLayers = [];
         }
 
-        function filterData(filterType) {
+        // Načtení reálných linií dálnic z OSRM Routing API
+        async function fetchHighwayGeometry(waypoints) {
+            const coordsString = waypoints.map(wp => wp.join(',')).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.routes && data.routes.length > 0) {
+                    // OSRM vracejí souřadnice [lng, lat], Leaflet potřebuje [lat, lng]
+                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                }
+            } catch (e) {
+                console.error("Chyba při načítání trasy:", e);
+            }
+            return null;
+        }
+
+        async function filterData(filterType) {
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             clearLayers();
 
-            // Vykreslení čar dálnic (Letní sobotní zákaz)
+            // Vykreslení přesných linií dálnic
             if (filterType === 'ALL' || filterType === 'SUMMER') {
-                SUMMER_HIGHWAYS.forEach(hw => {
-                    const polyline = L.polyline(hw.path, {
-                        color: '#f59e0b',
-                        weight: 6,
-                        opacity: 0.8
-                    }).addTo(map);
+                for (const hw of SUMMER_HIGHWAYS) {
+                    const routeCoords = await fetchHighwayGeometry(hw.waypoints);
+                    if (routeCoords) {
+                        const polyline = L.polyline(routeCoords, {
+                            color: '#f59e0b',
+                            weight: 5,
+                            opacity: 0.85
+                        }).addTo(map);
 
-                    const popupContent = `
-                        <div class="popup-title">${hw.name}</div>
-                        <span class="popup-badge">☀️ LETNÍ SOBOTNÍ ZÁKAZ</span>
-                        <div>${hw.detail}</div>
-                        <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${hw.detour}</div>
-                    `;
-                    polyline.bindPopup(popupContent);
-                    activeLayers.push(polyline);
-                });
+                        const popupContent = `
+                            <div class="popup-title">${hw.name}</div>
+                            <span class="popup-badge">☀️ LETNÍ SOBOTNÍ ZÁKAZ</span>
+                            <div>${hw.detail}</div>
+                            <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${hw.detour}</div>
+                        `;
+                        polyline.bindPopup(popupContent);
+                        activeLayers.push(polyline);
+                    }
+                }
             }
 
             // Vykreslení bodových značek
