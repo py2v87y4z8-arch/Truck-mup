@@ -249,17 +249,16 @@
             let routeUrl = '';
 
             if (useDetour) {
-                let midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
-                let midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
-
-                // Speciální pravidlo pro výjezd ze západních Čech / Chebska směrem na Sever (Hamburg apod.)
-                // Vynutí prázdninovou objížďku přes A72 (Zwickau) -> Lipsko (A14), aby se zcela vyhnula zakázané A9
-                if (startCoords.lng > 11.8 && startCoords.lat < 50.8 && endCoords.lat > 52.0) {
-                    midLat = 51.33; // Souřadnice Lipska (A72 / A14)
-                    midLng = 12.38;
+                // Vynucení objížďky z Chebska / Západních Čech po A72 -> Zwickau -> A14 -> Lipsko
+                if (startCoords.lng > 11.8 && startCoords.lat < 51.0 && endCoords.lat > 52.0) {
+                    const a72Zwickau = "12.44,50.66"; // Průjezdní bod A72 u Zwickau
+                    const a14Leipzig = "12.42,51.39"; // Průjezdní bod A14 u Lipska
+                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${a72Zwickau};${a14Leipzig};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
+                } else {
+                    let midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
+                    let midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
+                    routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
                 }
-
-                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
             } else {
                 routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
             }
