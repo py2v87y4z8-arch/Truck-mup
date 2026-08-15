@@ -62,39 +62,42 @@
         maxZoom: 19
     }).addTo(map);
 
-    // Rozšířené úseky se zákazem jízdy kamionů v Německu (Soboty v léte 07:00 - 20:00)
+    // Definice dálničních zákazových tras
     const germanBans = [
-        // A1: Lübeck - Hamburg - Bremen - Dortmund - Köln
         { name: "A1 Zákaz jízdy", coords: [[53.86, 10.68], [53.55, 9.99], [53.07, 8.80], [51.51, 7.46], [50.93, 6.95]] },
-        // A2: Hannover - Braunschweig
         { name: "A2 Zákaz jízdy", coords: [[52.37, 9.73], [52.26, 10.52]] },
-        // A3: Oberhausen - Frankfurt - Würzburg - Nürnberg - Passau
         { name: "A3 Zákaz jízdy", coords: [[51.47, 6.85], [50.11, 8.68], [49.79, 9.93], [49.45, 11.08], [48.56, 13.46]] },
-        // A5: Hattenbach - Frankfurt - Karlsruhe - Basel
         { name: "A5 Zákaz jízdy", coords: [[50.80, 9.54], [50.11, 8.68], [49.00, 8.40], [47.55, 7.58]] },
-        // A6: Mannheim - Heilbronn - Nürnberg
         { name: "A6 Zákaz jízdy", coords: [[49.48, 8.46], [49.14, 9.21], [49.45, 11.08]] },
-        // A7: Hamburg - Hannover - Kassel - Würzburg - Füssen
         { name: "A7 Zákaz jízdy", coords: [[53.55, 9.99], [52.37, 9.73], [51.31, 9.49], [49.79, 9.93], [47.56, 10.70]] },
-        // A8: Karlsruhe - Stuttgart - München - Salzburg
         { name: "A8 Zákaz jízdy", coords: [[49.00, 8.40], [48.77, 9.18], [48.13, 11.57], [47.80, 12.00]] },
-        // A9: Berlin/Leipzig - Nürnberg - München
         { name: "A9 Zákaz jízdy", coords: [[51.34, 12.37], [49.45, 11.08], [48.13, 11.57]] },
-        // A61: Koblenz - Ludwigshafen
         { name: "A61 Zákaz jízdy", coords: [[50.35, 7.59], [49.53, 8.35]] },
-        // A99: Obchvat Mnichov
-        { name: "A99 Mnichovský okruh", coords: [[48.22, 11.45], [48.11, 11.73]] }
+        { name: "A99 Mnichov", coords: [[48.22, 11.45], [48.11, 11.73]] }
     ];
 
-    // Vykreslení všech zákazových úseků červenou čárkovanou čárou
-    germanBans.forEach(ban => {
-        L.polyline(ban.coords, {
-            color: '#ef4444',
-            weight: 5,
-            dashArray: '8, 8',
-            opacity: 0.95
-        }).addTo(map).bindPopup(`<b>${ban.name}</b><br>Sobotní prázdninový zákaz (07:00 – 20:00)`);
-    });
+    // Funkce, která automaticky stáhne přesné zakřivení dálnic
+    async function loadAccurateBans() {
+        for (const ban of germanBans) {
+            const coordsFormatted = ban.coords.map(c => `${c[1]},${c[0]}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordsFormatted}?overview=full&geometries=geojson`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.routes && data.routes[0]) {
+                    L.geoJSON(data.routes[0].geometry, {
+                        style: { color: '#ef4444', weight: 5, dashArray: '8, 8', opacity: 0.95 }
+                    }).addTo(map).bindPopup(`<b>${ban.name}</b><br>Sobotní zákaz jízdy (07:00 – 20:00)`);
+                }
+            } catch (e) {
+                console.error("Chyba při načítání zákazu:", e);
+            }
+        }
+    }
+
+    // Načíst přesné dálnice při otevření stránky
+    loadAccurateBans();
 
     let routeLayer;
 
