@@ -7,218 +7,432 @@
     <!-- Leaflet CSS pro mapu -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #121212; color: #fff; }
-        #app-header { background: #1e1e1e; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
-        #app-header h1 { margin: 0; font-size: 18px; color: #f59e0b; display: flex; align-items: center; gap: 8px; }
-        #map { height: calc(100vh - 120px); width: 100vw; background: #242424; }
-        #filter-bar { background: #1e1e1e; padding: 10px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #333; }
-        .filter-btn { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer; }
-        .filter-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
         
-        .leaflet-popup-content-wrapper { background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 14px; }
-        .leaflet-popup-tip { background: #1e1e1e; }
-        .popup-title { font-weight: bold; font-size: 16px; color: #f59e0b; margin-bottom: 6px; }
-        .popup-badge { display: inline-block; padding: 3px 6px; background: #374151; color: #f3f4f6; border-radius: 4px; font-size: 11px; margin-bottom: 8px; font-weight: bold; }
-        .popup-detour { background: #064e3b; color: #a7f3d0; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 12px; }
+        /* Horní lišta aplikace */
+        #app-header {
+            background-color: #1e1e1e;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        #app-header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #f59e0b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-tag {
+            background-color: #064e3b;
+            color: #a7f3d0;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid #059669;
+        }
+
+        /* Mapa */
+        #map {
+            height: 50vh;
+            width: 100%;
+            background-color: #242424;
+        }
+
+        /* Filtrovací tlačítka pod mapou */
+        #filter-bar {
+            background-color: #1e1e1e;
+            padding: 12px 16px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+        }
+        .filter-btn {
+            background-color: #2a2a2a;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .filter-btn:hover {
+            background-color: #383838;
+            color: #fff;
+        }
+        .filter-btn.active {
+            background-color: #f59e0b;
+            color: #111;
+            border-color: #f59e0b;
+        }
+
+        /* Hlavní kontejner s daty */
+        .content-container {
+            padding: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Vyhledávací pole */
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+        .search-box:focus {
+            border-color: #f59e0b;
+        }
+
+        /* Sekce seznamu omezení */
+        .list-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #f59e0b;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .restriction-card {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #333;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: transform 0.1s ease;
+        }
+        .restriction-card:hover {
+            border-color: #555;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            margin: 0;
+        }
+        
+        .badge {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .badge-closed { background-color: #7f1d1d; color: #fca5a5; }
+        .badge-weight { background-color: #78350f; color: #fde68a; }
+        .badge-adr { background-color: #1e3a8a; color: #bfdbfe; }
+
+        .card-desc {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+
+        .card-detour {
+            background-color: #142e1b;
+            border-left: 3px solid #10b981;
+            padding: 8px 12px;
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            color: #d1fae5;
+            margin-top: 4px;
+        }
+
+        /* Úprava stylů pro vyskakovací okna v mapě */
+        .leaflet-popup-content-wrapper {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .leaflet-popup-tip {
+            background-color: #1e1e1e;
+        }
+        .popup-title {
+            font-weight: bold;
+            font-size: 15px;
+            color: #f59e0b;
+            margin-bottom: 4px;
+        }
+        .popup-detour {
+            background-color: #064e3b;
+            color: #a7f3d0;
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-top: 6px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
 
     <div id="app-header">
         <h1>🚛 LKW Mapa Omezení BGL 2026</h1>
+        <span class="status-tag">DB V1.4 Active</span>
     </div>
 
     <div id="map"></div>
 
     <div id="filter-bar">
-        <button class="filter-btn active" onclick="filterData('ALL')">Všechny zákazy</button>
-        <button class="filter-btn" onclick="filterData('SUMMER')">☀️ Letní sobota (Přesné dálnice)</button>
-        <button class="filter-btn" onclick="filterData('CLOSED')">🛑 Trvalé uzávěry</button>
-        <button class="filter-btn" onclick="filterData('WEIGHT')">⚖️ Váha / Výška</button>
-        <button class="filter-btn" onclick="filterData('ADR')">⚠️ Zákazy ADR</button>
+        <button class="filter-btn active" onclick="applyFilter('ALL', this)">Všechna omezení</button>
+        <button class="filter-btn" onclick="applyFilter('CLOSED', this)">🛑 Úplné uzávěry</button>
+        <button class="filter-btn" onclick="applyFilter('WEIGHT', this)">⚖️ Váha a Výška</button>
+        <button class="filter-btn" onclick="applyFilter('ADR', this)">⚠️ Zákazy ADR</button>
+    </div>
+
+    <div class="content-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Hledat dálnici, město nebo tunel (např. A45, Würzburg, Elbtunnel)..." oninput="handleSearch()">
+
+        <div class="list-title">
+            <span>Přehled dotčených úseků</span>
+            <span id="counter" style="font-size: 13px; color: #888;">Zobrazeno: 11 úseků</span>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid">
+            <!-- Karty se generují dynamicky pomocí JS -->
+        </div>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map').setView([51.1657, 10.4515], 6);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors, © CARTO'
-        }).addTo(map);
-
-        // Přesné dálniční křižovatky pro OSRM trasování [Lng, Lat]
-        const SUMMER_HIGHWAYS = [
+        // Kompletní databáze BGL 2026
+        const RESTRICTIONS_DATA = [
             {
-                id: "A9",
-                name: "Dálnice A9 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Dreieck Potsdam – Schkeuditzer Kreuz – Hermsdorfer Kreuz – Nürnberg – München.",
-                detour: "Využijte alternativní tranzitní obchvaty BGL.",
-                waypoints: [
-                    [12.9731, 52.3168], // Dreieck Potsdam (A9/A10)
-                    [12.2368, 51.4363], // Schkeuditzer Kreuz (Mimo Lipsko)
-                    [11.9056, 50.8931], // Hermsdorfer Kreuz
-                    [11.1925, 49.4219], // AK Nürnberg
-                    [11.6241, 48.1968]  // AK München-Nord
-                ]
+                id: "A45",
+                type: "CLOSED",
+                name: "A45 - Talbrücke Rahmede",
+                coords: [51.2222, 7.6311],
+                detail: "Z důvodu kompletní stavby nového dálničního mostu je úsek zcela uzavřen pro veškerou dopravu.",
+                detour: "Doporučený tranzitní objezd přes A1 / A3."
             },
             {
-                id: "A1",
-                name: "Dálnice A1 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úseky Köln – Dortmund – Bremen – Hamburg.",
-                detour: "Využijte doporučené obchvatové komunikace BGL.",
-                waypoints: [
-                    [6.9200, 50.9600], [7.4800, 51.5200], [8.8100, 53.0500], [10.0200, 53.5300]
-                ]
+                id: "A113",
+                type: "CLOSED",
+                name: "A113 - Berlín (směr Hamburg)",
+                coords: [52.4167, 13.5167],
+                detail: "Uzávěra úseku platí výhradně pro směr jízdy na Hamburg.",
+                detour: "Tranzit směrován na Berlínský okruh A10."
             },
             {
-                id: "A3",
-                name: "Dálnice A3 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Oberhausen – Frankfurt – Nürnberg – Passau.",
-                detour: "Objízdné trasy BGL.",
-                waypoints: [
-                    [6.8600, 51.4708], [8.5700, 50.0500], [9.9535, 49.7913], [11.1800, 49.4100], [13.4300, 48.5500]
-                ]
+                id: "A73",
+                type: "WEIGHT",
+                name: "A73 - Norimberk (Městský průjezd)",
+                coords: [49.4521, 11.0767],
+                detail: "Výškové omezení podjezdů na maximálně 3,90 m.",
+                detour: "Tranzitní vozidla nad 3.9m odkláněna na A9."
             },
             {
-                id: "A5",
-                name: "Dálnice A5 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Úsek Darmstadt – Karlsruhe – Basel.",
-                detour: "Použijte paralelní obchvatové cesty značené BGL.",
-                waypoints: [
-                    [8.6200, 49.8600], [8.4300, 49.0000], [7.6000, 47.5800]
-                ]
+                id: "A10",
+                type: "WEIGHT",
+                name: "A10 - Berlínský okruh",
+                coords: [52.3500, 13.0000],
+                detail: "Stavební práce na okruhu. Doporučení vyhnout se průjezdu vnitřním městským sektorem.",
+                detour: "Využijte vnější obchvat A10."
             },
             {
-                id: "A7",
-                name: "Dálnice A7 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Schleswig-Holstein – Hannover – Würzburg – Füssen.",
-                detour: "Využijte BGL schválené vedlejší tahy.",
-                waypoints: [
-                    [9.4300, 54.7800], [9.9800, 53.5200], [9.8000, 52.3200], [10.0000, 49.8000], [10.5600, 47.5600]
-                ]
+                id: "ELBTUNNEL",
+                type: "ADR",
+                name: "A7 - Elbtunnel (Hamburk)",
+                coords: [53.5435, 9.9073],
+                detail: "Zákaz průjezdu pro vozidla přepravující nebezpečný náklad (ADR) v čase od 05:00 do 23:00.",
+                detour: "Objízdná trasa přes obchvat A21 / B205."
             },
             {
-                id: "A8",
-                name: "Dálnice A8 - Letní prázdninový zákaz",
-                detail: "Soboty 1.7. - 31.8. (07:00 - 20:00). Karlsruhe – Stuttgart – München – Salzburg.",
-                detour: "Sledujte tranzitní objížďky BGL.",
-                waypoints: [
-                    [8.4300, 49.0000], [9.1500, 48.7400], [11.4500, 48.1500], [12.8500, 47.7500]
-                ]
+                id: "EMSTUNNEL",
+                type: "ADR",
+                name: "A31 - Emstunnel",
+                coords: [53.3183, 7.3750],
+                detail: "Časové omezení pro přepravu ADR nákladů (05:00 - 23:00).",
+                detour: "Lokálně značená objížďka pro ADR."
+            },
+            {
+                id: "KANALTUNNEL",
+                type: "ADR",
+                name: "Kanaltunnel (Rendsburg)",
+                coords: [54.3000, 9.6833],
+                detail: "Trvalý celodenní zákaz průjezdu pro všechna vozidla s označením ADR.",
+                detour: "Objížďka vedena po A7 přes most Rader Hochbrücke."
+            },
+            {
+                id: "B26",
+                type: "WEIGHT",
+                name: "B26 - Hösbach",
+                coords: [50.0036, 9.2053],
+                detail: "Zákaz průjezdu pro LKW a soupravy s celkovou hmotností přesahující 7,5 t.",
+                detour: "Objížďka vedena po dálnici A3 (křižovatka Hösbach/Aschaffenburg)."
+            },
+            {
+                id: "B19_B27_B8",
+                type: "WEIGHT",
+                name: "B19 / B27 / B8 - Würzburg a okolí",
+                coords: [49.7913, 9.9535],
+                detail: "Zákaz pro nákladní vozidla nad 12 t. V širším centru Würzburgu zákaz pro vozidla nad 3,5 t.",
+                detour: "Tranzit směřován na dálniční obchvat A3 / A7."
+            },
+            {
+                id: "TREUENBRIETZEN",
+                type: "WEIGHT",
+                name: "Treuenbrietzen (B102)",
+                coords: [52.0964, 12.8711],
+                detail: "Uzávěra silnice pro nákladní vozidla nad 3,5 t celkové hmotnosti.",
+                detour: "Objízdná trasa přes B102, L812 a L80."
+            },
+            {
+                id: "OBERSCHLEISSHEIM",
+                type: "WEIGHT",
+                name: "Oberschleißheim",
+                coords: [48.2500, 11.5500],
+                detail: "Zákaz průjezdu nákladních automobilů nad 7,5 t.",
+                detour: "Objezdová trasa po dálnici A92 / A99."
             }
         ];
 
-        const POINT_RESTRICTIONS = [
-            {
-                id: "A45", type: "CLOSED", name: "A45 - Talbrücke Rahmede", coords: [51.2222, 7.6311],
-                detail: "Úplná uzávěra z důvodu novostavby mostu.", detour: "Doporučená objížďka přes A1 / A3."
-            },
-            {
-                id: "A113", type: "CLOSED", name: "A113 - Berlín (směr Hamburg)", coords: [52.4167, 13.5167],
-                detail: "Zákaz jízdy platí výhradně ve směru na Hamburg.", detour: "Využijte Berlínský okruh A10."
-            },
-            {
-                id: "A73", type: "WEIGHT", name: "A73 - Norimberk", coords: [49.4521, 11.0767],
-                detail: "Omezení maximální výšky vozidla na 3,90 m.", detour: "Tranzitní objezd přes dálnici A9."
-            },
-            {
-                id: "ELBTUNNEL", type: "ADR", name: "A7 - Elbtunnel (Hamburk)", coords: [53.5435, 9.9073],
-                detail: "Zákaz průjezdu pro vozidla s ADR v čase 05:00 - 23:00.", detour: "Objízdný okruh A21 / B205."
-            },
-            {
-                id: "KANALTUNNEL", type: "ADR", name: "Kanaltunnel (Rendsburg)", coords: [54.3000, 9.6833],
-                detail: "Celkový a trvalý zákaz průjezdu pro vozidla s ADR.", detour: "Trasa přes most A7 Rader Hochbrücke."
-            },
-            {
-                id: "B26", type: "WEIGHT", name: "B26 - Hösbach", coords: [50.0036, 9.2053],
-                detail: "Zákaz průjezdu pro LKW nad 7,5 t.", detour: "Objížďka po dálnici A3."
-            },
-            {
-                id: "B19_B27_B8", type: "WEIGHT", name: "B19 / B27 / B8 - Oblast Würzburg", coords: [49.7913, 9.9535],
-                detail: "Zákaz pro vozidla nad 12 t / 3,5 t v centru.", detour: "Využijte dálniční obchvat A3 / A7."
-            }
-        ];
+        let currentFilter = 'ALL';
+        let searchQuery = '';
+        let mapInstance = null;
+        let mapMarkers = [];
 
-        let activeLayers = [];
+        // Inicializace aplikace
+        function initApp() {
+            // Inicializace Leaflet mapy
+            mapInstance = L.map('map').setView([51.1657, 10.4515], 6);
 
-        function clearLayers() {
-            activeLayers.forEach(l => map.removeLayer(l));
-            activeLayers = [];
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors, © CARTO'
+            }).addTo(mapInstance);
+
+            updateView();
         }
 
-        async function fetchHighwayGeometry(waypoints) {
-            const coordsString = waypoints.map(wp => wp.join(',')).join(';');
-            const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
-            
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.routes && data.routes.length > 0) {
-                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        // Aktualizace mapy a seznamu karet podle filtrů
+        function updateView() {
+            // 1. Vyčištění stávajících značek z mapy
+            mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
+            mapMarkers = [];
+
+            // 2. Filtrování dat
+            const filteredData = RESTRICTIONS_DATA.filter(item => {
+                const matchesFilter = (currentFilter === 'ALL') || (item.type === currentFilter);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
+                                      item.detail.toLowerCase().includes(searchQuery) ||
+                                      item.id.toLowerCase().includes(searchQuery);
+                return matchesFilter && matchesSearch;
+            });
+
+            // 3. Vykreslení karet
+            const cardsGrid = document.getElementById('cardsGrid');
+            cardsGrid.innerHTML = '';
+
+            filteredData.forEach(item => {
+                // Vytvoření značky na mapě
+                let color = "#ef4444"; // Červená pro uzávěry
+                let badgeClass = "badge-closed";
+                let badgeText = "🛑 Uzávěra";
+
+                if (item.type === "WEIGHT") {
+                    color = "#f59e0b"; // Oranžová
+                    badgeClass = "badge-weight";
+                    badgeText = "⚖️ Váha / Výška";
+                } else if (item.type === "ADR") {
+                    color = "#3b82f6"; // Modrá
+                    badgeClass = "badge-adr";
+                    badgeText = "⚠️ ADR Zákaz";
                 }
-            } catch (e) {
-                console.error("Chyba trasování:", e);
-            }
-            return null;
-        }
-
-        async function filterData(filterType) {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            clearLayers();
-
-            if (filterType === 'ALL' || filterType === 'SUMMER') {
-                for (const hw of SUMMER_HIGHWAYS) {
-                    const routeCoords = await fetchHighwayGeometry(hw.waypoints);
-                    if (routeCoords) {
-                        const polyline = L.polyline(routeCoords, {
-                            color: '#f59e0b',
-                            weight: 5,
-                            opacity: 0.85
-                        }).addTo(map);
-
-                        const popupContent = `
-                            <div class="popup-title">${hw.name}</div>
-                            <span class="popup-badge">☀️ LETNÍ SOBOTNÍ ZÁKAZ</span>
-                            <div>${hw.detail}</div>
-                            <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${hw.detour}</div>
-                        `;
-                        polyline.bindPopup(popupContent);
-                        activeLayers.push(polyline);
-                    }
-                }
-            }
-
-            POINT_RESTRICTIONS.forEach(item => {
-                if (filterType !== 'ALL' && item.type !== filterType) return;
-
-                let color = "#ef4444";
-                if (item.type === "WEIGHT") color = "#f59e0b";
-                if (item.type === "ADR") color = "#3b82f6";
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
-                    iconSize: [18, 18],
-                    iconAnchor: [9, 9]
+                    html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 6px rgba(0,0,0,0.6);"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
                 });
 
-                const marker = L.marker(item.coords, { icon: customIcon }).addTo(map);
-                const popupHtml = `
+                const marker = L.marker(item.coords, { icon: customIcon }).addTo(mapInstance);
+                marker.bindPopup(`
                     <div class="popup-title">${item.name}</div>
-                    <span class="popup-badge">${item.type}</span>
                     <div>${item.detail}</div>
                     <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${item.detour}</div>
+                `);
+                mapMarkers.push(marker);
+
+                // Vytvoření HTML karty
+                const card = document.createElement('div');
+                card.className = 'restriction-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h3 class="card-title">${item.name}</h3>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    <div class="card-desc">${item.detail}</div>
+                    <div class="card-detour">
+                        <b>💡 Doporučená objížďka:</b><br>${item.detour}
+                    </div>
                 `;
-                marker.bindPopup(popupHtml);
-                activeLayers.push(marker);
+                cardsGrid.appendChild(card);
             });
+
+            // Aktualizace čítače
+            document.getElementById('counter').innerText = `Zobrazeno: ${filteredData.length} úseků`;
         }
 
-        filterData('ALL');
+        // Filtrování tlačítky
+        function applyFilter(filterType, btnElement) {
+            currentFilter = filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            updateView();
+        }
+
+        // Vyhledávání textem
+        function handleSearch() {
+            searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            updateView();
+        }
+
+        // Spustit při načtení stránky
+        window.onload = initApp;
     </script>
 </body>
 </html>
