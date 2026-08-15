@@ -6,40 +6,66 @@
     <title>Truck Map - Kamionová navigace</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; }
-        #sidebar { width: 320px; background: #1e293b; color: white; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; height: 100vh; background: #0f172a; color: white; }
+        #sidebar { width: 340px; background: #1e293b; padding: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.5); }
         #map { flex: 1; height: 100%; }
-        input, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
-        button { background: #0284c7; cursor: pointer; font-weight: bold; border: none; margin-top: 10px; }
+        h2 { margin: 0 0 2px 0; font-size: 20px; color: #f8fafc; }
+        .subtitle { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+        label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px; }
+        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 14px; margin-top: 4px; }
+        input:focus { outline: none; border-color: #38bdf8; }
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 14px; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
         button:hover { background: #0369a1; }
-        .label { font-size: 12px; color: #94a3b8; margin-bottom: -5px; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <h2>Truck Navigation</h2>
-    
-    <div class="label">API Klíč (HeiGIT / OpenRouteService)</div>
-    <input type="text" id="apiKey" placeholder="Vložte váš API klíč (ey...)" />
+    <h2>Truck Navigator</h2>
+    <div class="subtitle">& Zákazy jízdy v Německu</div>
 
-    <div class="label">Start (Zeměpisná šířka, délka)</div>
-    <input type="text" id="startCoords" placeholder="např. 50.0755, 14.4378" value="50.0755, 14.4378" />
+    <div>
+        <label>OPENROUTESERVICE API KLÍČ</label>
+        <input type="text" id="apiKey" placeholder="Vložte váš API klíč (ey...)" />
+    </div>
 
-    <div class="label">Cíl (Zeměpisná šířka, délka)</div>
-    <input type="text" id="endCoords" placeholder="např. 52.5200, 13.4050" value="52.5200, 13.4050" />
+    <div>
+        <label>Start (Šířka, Délka)</label>
+        <input type="text" id="startCoords" placeholder="50.0755, 14.4378" value="50.0755, 14.4378" />
+    </div>
 
-    <button onclick="calculateRoute()">Spočítat trasu pro kamion</button>
+    <div>
+        <label>Cíl (Šířka, Délka)</label>
+        <input type="text" id="endCoords" placeholder="53.5511, 9.9937" value="53.5511, 9.9937" />
+    </div>
+
+    <div class="row">
+        <div>
+            <label>Výška (m)</label>
+            <input type="number" id="height" value="4.0" step="0.1" />
+        </div>
+        <div>
+            <label>Délka (m)</label>
+            <input type="number" id="length" value="16.5" step="0.1" />
+        </div>
+    </div>
+
+    <button onclick="calculateRoute()">Spočítat přímou trasu (HGV)</button>
 </div>
 
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Inicializace mapy
     const map = L.map('map').setView([51.1657, 10.4515], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+    
+    // Tmavá mapa podle vašeho vzoru
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19
     }).addTo(map);
 
     let routeLayer;
@@ -64,49 +90,31 @@
         const endLat = parseFloat(endInput[0].trim());
         const endLng = parseFloat(endInput[1].trim());
 
-        // NOVÁ AKTUALIZOVANÁ ADRESA HEIGIT (Nahradila starou api.openrouteservice.org)
-        const url = 'https://api.heigit.org/v2/directions/driving-hgv/geojson';
-
-        const bodyData = {
-            coordinates: [
-                [startLng, startLat], // ORS vyžaduje pořadí [Délka, Šířka]
-                [endLng, endLat]
-            ]
-        };
+        // Nová adresa + předání klíče přímo v URL (řeší chybové hlášení Failed to fetch)
+        const url = `https://api.heigit.org/v2/directions/driving-hgv?api_key=${apiKey}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
 
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Authorization': apiKey,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json, application/geo+json'
-                },
-                body: JSON.stringify(bodyData)
-            });
+            const response = await fetch(url);
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error?.message || `Chyba serveru: ${response.status}`);
+                throw new Error(errorData.error?.message || `Chyba serveru (${response.status})`);
             }
 
             const data = await response.json();
 
-            // Odstranění staré trasy z mapy
             if (routeLayer) {
                 map.removeLayer(routeLayer);
             }
 
-            // Vykreslení nové trasy
             routeLayer = L.geoJSON(data, {
-                style: { color: '#0284c7', weight: 6, opacity: 0.8 }
+                style: { color: '#00b4d8', weight: 6, opacity: 0.9 }
             }).addTo(map);
 
-            // Přizpůsobení pohledu mapy na trasu
-            map.fitBounds(routeLayer.getBounds());
+            map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
         } catch (error) {
-            console.error('Chyba při výpočtu trasy:', error);
+            console.error('Chyba při výpočtu:', error);
             alert('Chyba výpočtu trasy: ' + error.message);
         }
     }
