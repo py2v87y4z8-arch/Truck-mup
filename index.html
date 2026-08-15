@@ -2,141 +2,199 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LKW Plánovač & Mapa BGL 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LKW Navigační Mapa BGL 2026</title>
     <!-- Leaflet CSS pro mapu -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f6f9; }
-        .container { max-width: 1100px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #map { height: 450px; width: 100%; border-radius: 8px; z-index: 1; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
-        .form-group { margin-bottom: 10px; }
-        label { font-weight: bold; display: block; margin-bottom: 4px; font-size: 14px; }
-        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: #0056b3; color: white; border: none; padding: 12px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; font-weight: bold; }
-        button:hover { background: #004085; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
-        th { background: #f8f9fa; }
-        .status-ok { color: green; font-weight: bold; }
-        .status-warn { color: red; font-weight: bold; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #121212; color: #fff; }
+        #app-header { background: #1e1e1e; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; }
+        #app-header h1 { margin: 0; font-size: 18px; color: #f59e0b; display: flex; align-items: center; gap: 8px; }
+        #map { height: calc(100vh - 120px); width: 100vw; background: #242424; }
+        #filter-bar { background: #1e1e1e; padding: 10px; display: flex; gap: 8px; overflow-x: auto; border-top: 1px solid #333; }
+        .filter-btn { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+        .filter-btn.active { background: #f59e0b; color: #000; border-color: #f59e0b; }
+        
+        /* Úprava vzhledu bublin v mapě */
+        .leaflet-popup-content-wrapper { background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 14px; }
+        .leaflet-popup-tip { background: #1e1e1e; }
+        .popup-title { font-weight: bold; font-size: 16px; color: #ef4444; margin-bottom: 6px; }
+        .popup-badge { display: inline-block; padding: 3px 6px; background: #374151; color: #f3f4f6; border-radius: 4px; font-size: 11px; margin-bottom: 8px; font-weight: bold; }
+        .popup-detour { background: #064e3b; color: #a7f3d0; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Mapa -->
-        <div class="card">
-            <h2>🗺️ Mapa omezení BGL 2026 (Německo)</h2>
-            <div id="map"></div>
-        </div>
 
-        <!-- Plánovací formulář -->
-        <div class="card">
-            <h2>📋 Plánovač přeprav BGL 2026</h2>
-            <div class="form-grid">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Trasa / Průjezdní body (oddělené čárkou, např. A45, B26, A73, ELBTUNNEL):</label>
-                    <input type="text" id="route" value="A45, B26, A73, ELBTUNNEL, A10">
-                </div>
-                <div class="form-group">
-                    <label>Hmotnost (tuny):</label>
-                    <input type="number" id="weight" value="12.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Výška (metry):</label>
-                    <input type="number" id="height" value="4.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Přeprava ADR (nebezpečný náklad):</label>
-                    <select id="hazmat">
-                        <option value="false">Ne</option>
-                        <option value="true">Ano</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="evaluateRoute()">Vyhodnotit plán trasy a zobrazit v mapě</button>
-            <div id="results"></div>
-        </div>
+    <div id="app-header">
+        <h1>🚛 LKW Mapa Omezení BGL 2026</h1>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="filter-bar">
+        <button class="filter-btn active" onclick="filterMarkers('ALL')">Všechny zákazy</button>
+        <button class="filter-btn" onclick="filterMarkers('CLOSED')">🛑 Úplné uzávěry</button>
+        <button class="filter-btn" onclick="filterMarkers('WEIGHT')">⚖️ Váha / Výška</button>
+        <button class="filter-btn" onclick="filterMarkers('ADR')">⚠️ Zákazy ADR</button>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Oficiální databáze BGL 2026 s GPS souřadnicemi
-        const RESTRICTIONS = {
-            "A45": { name: "A45 - Talbrücke Rahmede", coords: [51.2222, 7.6311], closed: true, detour: "Uzávěra: Objížďka přes A1/A3" },
-            "A113": { name: "A113 - Berlin (směr Hamburg)", coords: [52.4167, 13.5167], dir: "HAMBURG", detour: "Omezení ve směru Hamburg" },
-            "A73": { name: "A73 - Norimberk", coords: [49.4521, 11.0767], max_h: 3.9, detour: "A9 pro vozidla nad 3.9m" },
-            "A10": { name: "A10 - Berlínský okruh", coords: [52.3500, 13.0000], rec: "Doporučeno minout centrum Berlína" },
-            "ELBTUNNEL": { name: "Elbtunnel (A7)", coords: [53.5435, 9.9073], adr: true, time: "05:00-23:00", detour: "Objízdný okruh A21/B205" },
-            "EMSTUNNEL": { name: "Emstunnel (A31)", coords: [53.3183, 7.3750], adr: true, time: "05:00-23:00", detour: "Lokální obchvat pro ADR" },
-            "KANALTUNNEL": { name: "Kanaltunnel", coords: [54.3000, 9.6833], adr_full: true, detour: "Trvalý zákaz ADR nákladů" },
-            "B26": { name: "B26 - Hösbach", coords: [50.0036, 9.2053], max_w: 7.5, detour: "A3 Hösbach/Aschaffenburg" },
-            "B19_B27_B8": { name: "B19/B27/B8 - Würzburg okruh", coords: [49.7913, 9.9535], max_w: 12.0, detour: "Obchvat Würzburgu nad 12t" },
-            "TREUENBRIETZEN": { name: "Treuenbrietzen", coords: [52.0964, 12.8711], max_w: 3.5, detour: "B102, L812, L80" },
-            "OBERSCHLEISSHEIM": { name: "Oberschleißheim", coords: [48.2500, 11.5500], max_w: 7.5, detour: "Zákaz průjezdu nad 7.5t" }
-        };
-
-        // Inicializace mapy Německa
+        // Inicializace tmavší mapy
         const map = L.map('map').setView([51.1657, 10.4515], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors, © CARTO'
         }).addTo(map);
 
-        let markers = {};
+        // Kompletní databáze BGL 2026 pro řidiče kamionů
+        const RESTRICTIONS = [
+            {
+                id: "A45",
+                type: "CLOSED",
+                name: "A45 - Talbrücke Rahmede",
+                coords: [51.2222, 7.6311],
+                detail: "Úplná uzávěra z důvodu novostavby mostu.",
+                detour: "Doporučená objížďka přes A1 / A3."
+            },
+            {
+                id: "A113",
+                type: "CLOSED",
+                name: "A113 - Berlín (směr Hamburg)",
+                coords: [52.4167, 13.5167],
+                detail: "Zákaz jízdy platí výhradně ve směru na Hamburg.",
+                detour: "Využijte Berlínský okruh A10."
+            },
+            {
+                id: "A73",
+                type: "WEIGHT",
+                name: "A73 - Norimberk (Městský úsek)",
+                coords: [49.4521, 11.0767],
+                detail: "Omezení maximální výšky vozidla na 3,90 m.",
+                detour: "Tranzitní objezd přes dálnici A9."
+            },
+            {
+                id: "A10",
+                type: "WEIGHT",
+                name: "A10 - Berlínský okruh",
+                coords: [52.3500, 13.0000],
+                detail: "Doporučení zcela minout centrum Berlína z důvodu stavebních prací a hmotnostních limitů.",
+                detour: "Využijte vnější obchvat A10."
+            },
+            {
+                id: "ELBTUNNEL",
+                type: "ADR",
+                name: "A7 - Elbtunnel (Hamburk)",
+                coords: [53.5435, 9.9073],
+                detail: "Zákaz průjezdu pro vozidla s označeným ADR nákladem v čase 05:00 - 23:00.",
+                detour: "Objízdný okruh A21 / B205."
+            },
+            {
+                id: "EMSTUNNEL",
+                type: "ADR",
+                name: "A31 - Emstunnel",
+                coords: [53.3183, 7.3750],
+                detail: "Zákaz průjezdu pro označená ADR vozidla v čase 05:00 - 23:00.",
+                detour: "Lokálně značená objízdná trasa."
+            },
+            {
+                id: "KANALTUNNEL",
+                type: "ADR",
+                name: "Kanaltunnel (Rendsburg)",
+                coords: [54.3000, 9.6833],
+                detail: "Celkový a trvalý zákaz průjezdu pro vozidla přepravující nebezpečný náklad.",
+                detour: "Trasa přes dálniční most A7 Rader Hochbrücke."
+            },
+            {
+                id: "B26",
+                type: "WEIGHT",
+                name: "B26 - Hösbach",
+                coords: [50.0036, 9.2053],
+                detail: "Zákaz průjezdu pro LKW nad 7,5 t celkové hmotnosti.",
+                detour: "Objížďka po dálnici A3 (křižovatka Hösbach/Aschaffenburg)."
+            },
+            {
+                id: "B19_B27_B8",
+                type: "WEIGHT",
+                name: "B19 / B27 / B8 - Oblast Würzburg",
+                coords: [49.7913, 9.9535],
+                detail: "Zákaz pro vozidla nad 12 t (úseky Würzburg-Höchberg a Unterpleichfeld-Werneck). Zákaz nad 3,5 t v samotném centru.",
+                detour: "Využijte dálniční obchvat A3 / A7."
+            },
+            {
+                id: "TREUENBRIETZEN",
+                type: "WEIGHT",
+                name: "Treuenbrietzen (B102)",
+                coords: [52.0964, 12.8711],
+                detail: "Úplná uzávěra průjezdu pro LKW nad 3,5 t.",
+                detour: "Vyznačená objízdná trasa přes B102, L812 a L80."
+            },
+            {
+                id: "OBERSCHLEISSHEIM",
+                type: "WEIGHT",
+                name: "Oberschleißheim",
+                coords: [48.2500, 11.5500],
+                detail: "Zákaz průjezdu pro nákladní vozidla od 7,5 t celkové hmotnosti.",
+                detour: "Objezd po dálnici A92 / A99."
+            },
+            {
+                id: "B62",
+                type: "WEIGHT",
+                name: "B62 - Bad Hersfeld / Sorga",
+                coords: [50.8667, 9.7000],
+                detail: "Dopravní komplikace, opravy podjezdů a váhově omezené mosty.",
+                detour: "Doporučeno využít dálnici A4 / A7."
+            }
+        ];
 
-        // Vykreslení všech bodů na mapu
-        for (let code in RESTRICTIONS) {
-            let res = RESTRICTIONS[code];
-            let marker = L.marker(res.coords).addTo(map);
-            marker.bindPopup(`<b>${res.name}</b><br>${res.detour || 'BGL 2026 Omezení'}`);
-            markers[code] = marker;
-        }
+        let loadedMarkers = [];
 
-        function evaluateRoute() {
-            const nodes = document.getElementById("route").value.split(",").map(s => s.trim().toUpperCase());
-            const weight = parseFloat(document.getElementById("weight").value);
-            const height = parseFloat(document.getElementById("height").value);
-            const hazmat = document.getElementById("hazmat").value === "true";
+        // Vykreslení značek do mapy
+        function renderMarkers(filterType = 'ALL') {
+            // Smazat stávající značky
+            loadedMarkers.forEach(m => map.removeLayer(m));
+            loadedMarkers = [];
 
-            let overallStatus = true;
-            let rowsHtml = "";
+            RESTRICTIONS.forEach(item => {
+                if (filterType !== 'ALL' && item.type !== filterType) return;
 
-            nodes.forEach(node => {
-                if (RESTRICTIONS[node]) {
-                    const res = RESTRICTIONS[node];
-                    let issues = [];
+                // Určení barvy ikony
+                let color = "#ef4444"; // Červená pro uzávěry
+                if (item.type === "WEIGHT") color = "#f59e0b"; // Oranžová pro váhu/výšku
+                if (item.type === "ADR") color = "#3b82f6"; // Modrá pro ADR
 
-                    if (res.closed) issues.push("Úplná uzávěra");
-                    if (res.max_w && weight > res.max_w) issues.push(`Váha ${weight}t > ${res.max_w}t`);
-                    if (res.max_h && height > res.max_h) issues.push(`Výška ${height}m > ${res.max_h}m`);
-                    if (res.adr && hazmat) issues.push(`Zákaz ADR (${res.time})`);
-                    if (res.adr_full && hazmat) issues.push("Trvalý zákaz ADR");
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
 
-                    if (issues.length > 0) {
-                        overallStatus = false;
-                        rowsHtml += `<tr><td><b>${res.name}</b></td><td><span class="status-warn">ZÁKAZ: ${issues.join(", ")}</span></td><td>${res.detour || '-'}</td></tr>`;
-                    } else {
-                        let note = res.rec ? ` (Upozornění: ${res.rec})` : "";
-                        rowsHtml += `<tr><td><b>${res.name}</b></td><td><span class="status-ok">OK${note}</span></td><td>-</td></tr>`;
-                    }
-                } else {
-                    rowsHtml += `<tr><td><b>${node}</b></td><td><span class="status-ok">OK (Bez omezení)</span></td><td>-</td></tr>`;
-                }
+                const marker = L.marker(item.coords, { icon: customIcon }).addTo(map);
+
+                const popupHtml = `
+                    <div class="popup-title">${item.name}</div>
+                    <span class="popup-badge">${item.type}</span>
+                    <div>${item.detail}</div>
+                    <div class="popup-detour"><b>🛠️ Objížďka BGL:</b><br>${item.detour}</div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                loadedMarkers.push(marker);
             });
-
-            const statusHeader = overallStatus 
-                ? `<h3 class="status-ok">Výsledek kontroly trasy: SCHVÁLENO</h3>` 
-                : `<h3 class="status-warn">Výsledek kontroly trasy: VYŽADUJE ÚPRAVU TRASY</h3>`;
-
-            document.getElementById("results").innerHTML = statusHeader + 
-                `<table><tr><th>Úsek / Bod</th><th>Stav vyhodnocení</th><th>Doporučená objížďka (BGL 2026)</th></tr>${rowsHtml}</table>`;
         }
 
-        // Spustit vyhodnocení při načtení
-        evaluateRoute();
+        function filterMarkers(type) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderMarkers(type);
+        }
+
+        // První načtení mapy
+        renderMarkers();
     </script>
 </body>
 </html>
