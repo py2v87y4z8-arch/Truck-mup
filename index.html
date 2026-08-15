@@ -32,6 +32,7 @@
         .checkbox-container input { width: auto; margin: 0; cursor: pointer; }
         .checkbox-container span { font-size: 12px; color: #e2e8f0; font-weight: 600; }
 
+        /* Štítky dálničních zákazů (červené) */
         .road-badge {
             background: #ef4444 !important;
             color: #ffffff !important;
@@ -41,6 +42,20 @@
             border-radius: 4px !important;
             border: 1px solid #ffffff !important;
             box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
+        }
+
+        /* Štítky pro čísla silnic na trase */
+        .route-road-badge {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 11px;
+            padding: 3px 7px;
+            border-radius: 4px;
+            border: 1px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+            text-align: center;
+            white-space: nowrap;
+            display: inline-block;
         }
     </style>
 </head>
@@ -99,6 +114,10 @@
             <span>Odhad jízdy:</span>
             <span id="timeVal" class="info-value">-- h -- min</span>
         </div>
+        <div class="info-row">
+            <span>Použité silnice:</span>
+            <span id="roadsVal" class="info-value" style="font-size:11px; max-width: 160px; text-align: right;">--</span>
+        </div>
     </div>
 </div>
 
@@ -114,6 +133,7 @@
     }).addTo(map);
 
     const banLayerGroup = L.layerGroup().addTo(map);
+    const routeBadgesLayerGroup = L.layerGroup().addTo(map);
 
     const germanBans = [
         { code: "A1", name: "A1 Zákaz jízdy", coords: [[53.86, 10.68], [53.55, 9.99], [53.07, 8.80], [51.51, 7.46], [50.93, 6.95]] },
@@ -231,12 +251,11 @@
             let routeUrl = '';
 
             if (useDetour) {
-                // Výpočet středového objízdného bodu (mimo přímou dálniční tranzitní trasa)
                 const midLat = (startCoords.lat + endCoords.lat) / 2 + 0.4;
                 const midLng = (startCoords.lng + endCoords.lng) / 2 + 0.5;
-                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`;
+                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${midLng},${midLat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
             } else {
-                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`;
+                routeUrl = `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson&steps=true`;
             }
 
             const response = await fetch(routeUrl);
@@ -271,8 +290,10 @@
             if (routeLayer) map.removeLayer(routeLayer);
             if (startMarker) map.removeLayer(startMarker);
             if (endMarker) map.removeLayer(endMarker);
+            routeBadgesLayerGroup.clearLayers();
 
             const routeColor = useDetour ? '#22c55e' : '#0284c7';
+            const badgeBg = useDetour ? '#16a34a' : '#0284c7';
 
             routeLayer = L.geoJSON(route.geometry, {
                 style: { color: routeColor, weight: 6, opacity: 0.95 }
@@ -280,6 +301,42 @@
 
             startMarker = L.marker([startCoords.lat, startCoords.lng]).addTo(map).bindPopup(`<b>Start:</b> ${startText}`);
             endMarker = L.marker([endCoords.lat, endCoords.lng]).addTo(map).bindPopup(`<b>Cíl:</b> ${endText}`);
+
+            // Extrakce a vykreslení čísel silnic na trase
+            const detectedRoads = new Set();
+            if (route.legs) {
+                route.legs.forEach(leg => {
+                    if (leg.steps) {
+                        leg.steps.forEach(step => {
+                            let roadRef = step.ref;
+                            if (!roadRef && step.name) {
+                                const match = step.name.match(/\b(A\d+|B\d+|D\d+|E\d+)\b/i);
+                                if (match) roadRef = match[0];
+                            }
+
+                            if (roadRef) {
+                                const cleanRef = roadRef.split(';')[0].trim();
+                                if (cleanRef && !detectedRoads.has(cleanRef) && step.maneuver && step.maneuver.location) {
+                                    detectedRoads.add(cleanRef);
+                                    const [lng, lat] = step.maneuver.location;
+
+                                    const badgeHtml = `<div class="route-road-badge" style="background:${badgeBg}">${cleanRef}</div>`;
+                                    const customIcon = L.divIcon({
+                                        className: '',
+                                        html: badgeHtml,
+                                        iconSize: [40, 20],
+                                        iconAnchor: [20, 10]
+                                    });
+
+                                    L.marker([lat, lng], { icon: customIcon }).addTo(routeBadgesLayerGroup);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            document.getElementById('roadsVal').innerText = Array.from(detectedRoads).join(', ') || 'Lokální komunikace';
 
             map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
 
